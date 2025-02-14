@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Game Login</title>
+    <style>
+      /* 基础样式重置 */
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+        background: linear-gradient(135deg, #2c3e50, #3498db);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+      }
+
+      .container {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 1rem;
+        padding: 2rem;
+        width: 100%;
+        max-width: 600px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(10px);
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 2rem;
+        color: #2c3e50;
+        font-size: 2.2rem;
+        letter-spacing: -0.5px;
+      }
+
+      .form-group {
+        margin-bottom: 1.5rem;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #34495e;
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+
+      input,
+      select {
+        width: 100%;
+        padding: 0.8rem 1.2rem;
+        font-size: 1rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 0.8rem;
+        transition: all 0.3s ease;
+        background: #f8f9fa;
+      }
+
+      input:focus,
+      select:focus {
+        border-color: #3498db;
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+      }
+
+      input[readonly] {
+        background-color: #f1f3f5;
+      }
+
+      button {
+        width: 100%;
+        padding: 1rem;
+        font-size: 1rem;
+        font-weight: 600;
+        border: none;
+        border-radius: 0.8rem;
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        color: white;
+        cursor: button;
+        transition: all 0.3s ease;
+        margin-top: 0.5rem;
+      }
+
+      button:hover:not([disabled]) {
+        transform: translateY(-1px);
+        box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+      }
+
+      button:active:not([disabled]) {
+        transform: translateY(0);
+      }
+
+      button:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+
+      .log-container {
+        margin-top: 2rem;
+        background: #f8f9fa;
+        border-radius: 0.8rem;
+        padding: 0.3rem;
+        height: 400px;
+        display: flex;
+        flex-direction: column;
+        display: none;
+        /* 默认隐藏日志组件 */
+      }
+
+      .log-header {
+        color: #2c3e50;
+        margin-bottom: 1rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
+
+      #logOutput {
+        flex: 1;
+        overflow-y: auto;
+        background: white;
+        border-radius: 0.6rem;
+        padding: 0.5rem;
+        border: 2px solid #e9ecef;
+      }
+
+      .log {
+        padding: 0.8rem;
+        margin-bottom: 0.5rem;
+        background: #f8f9fa;
+        border-radius: 0.4rem;
+        font-size: 0.9rem;
+        color: #34495e;
+        animation: slideIn 0.3s ease;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        backdrop-filter: blur(3px);
+      }
+
+      .spinner {
+        width: 3rem;
+        height: 3rem;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      #toast-container {
+        position: fixed;
+        bottom: 2rem;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 2000;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .toast {
+        padding: 1rem 1.5rem;
+        border-radius: 0.8rem;
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        opacity: 1;
+        transition: all 0.3s ease;
+      }
+
+      .toast.fade-out {
+        opacity: 0;
+        transform: translateY(20%);
+      }
+
+      /* 用户信息布局 */
+      .user-info {
+        display: none;
+        /* 默认隐藏 */
+        text-align: left;
+        margin-bottom: 2rem;
+      }
+
+      .user-details {
+        display: flex;
+        align-items: center; /* 垂直居中对齐 */
+      }
+
+      .user-info img {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-right: 1rem; /* 头像与右侧文字的间距 */
+
+        /* 美化头像 */
+        border: 4px solid #fff; /* 添加白色边框 */
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 添加阴影效果 */
+        transition: all 0.3s ease; /* 平滑过渡效果 */
+      }
+
+      /* 头像悬停效果 */
+      .user-info img:hover {
+        transform: scale(1.1); /* 悬停时放大头像 */
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2); /* 增强阴影 */
+      }
+
+      .user-info-text {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .user-info h2 {
+        color: #2c3e50;
+        font-size: 1.5rem;
+        margin: 0;
+      }
+
+      .user-info p {
+        color: #7f8c8d;
+        font-size: 1rem;
+        margin: 0.5rem 0 0 0; /* 调整文本之间的间距 */
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <div id="overlay" class="overlay" style="display: none">
+        <div class="spinner"></div>
+      </div>
+
+      <!-- 登录表单 -->
+      <div id="loginForm">
+        <h1>🎮 Game Login</h1>
+        <div class="form-group">
+          <label>Username</label>
+          <input
+            type="text"
+            id="username"
+            value="wananan7"
+            placeholder="Enter username"
+          />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input
+            type="password"
+            id="password"
+            value="wananya7"
+            placeholder="Enter password"
+          />
+        </div>
+        <button id="fetchServersBtn" onclick="fetchServerList()">
+          🌐 Get Server List
+        </button>
+
+        <div class="form-group">
+          <label>Select Server</label>
+          <select id="servers" onchange="updateServerId()" disabled>
+            <option value="">-- Choose Server --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Server ID</label>
+          <input
+            type="text"
+            id="serverId"
+            readonly
+            placeholder="Selected Server ID"
+          />
+        </div>
+        <button id="loginBtn" onclick="login()">🚀 Start Gaming</button>
+      </div>
+
+      <!-- 用户信息布局 -->
+      <div id="userInfo" class="user-info">
+        <div class="user-details">
+          <img src="https://thirdwx.qlogo.cn/mmopen/vi_32/j1LmYTicy5iakfZUHFK1s2E1lmggwcHrv1HTGa4Ycic4DytAIhhu8z4icYW1pb4Xd4EpB2dzpXTqOpyWB8fGQiaR7omUBXtqNLoS2xsKee6Xnawo/132" alt="User Avatar" />
+          <div class="user-info-text">
+            <h2 id="userName">John Doe</h2>
+            <p id="playerBelong">New York, USA</p>
+            <p id="playerId">User ID: 123456</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 日志组件 -->
+      <div class="log-container">
+        <div class="log-header">Game Logs</div>
+        <div id="logOutput"></div>
+      </div>
+    </div>
+    <div id="toast-container"></div>
+    <script>
+      const MAX_LOG_ITEMS = 50;
+      let logCount = 0;
+      let ws = null;
+
+      function showToast(message, type = "info") {
+        const toast = document.createElement("div");
+        toast.className = `toast ${type}`;
+        toast.innerHTML = ` <span>${message}</span> `;
+        const container = document.getElementById("toast-container");
+        container.appendChild(toast);
+        setTimeout(() => {
+          toast.classList.add("fade-out");
+          setTimeout(() => toast.remove(), 300);
+        }, 3000);
+      }
+
+      function updateServerId() {
+        document.getElementById("serverId").value =
+          document.getElementById("servers").value;
+      }
+
+      function showOverlay() {
+        document.getElementById("overlay").style.display = "flex";
+      }
+
+      function hideOverlay() {
+        document.getElementById("overlay").style.display = "none";
+      }
+
+      async function fetchServerList() {
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value.trim();
+        if (!username || !password) {
+          showToast("🔐 Please enter username and password", "warning");
+          return;
+        }
+        try {
+          showOverlay();
+          const response = await fetch(
+            `http://localhost:3000/api/servers?username=${encodeURIComponent(
+              username
+            )}&password=${encodeURIComponent(password)}`
+          );
+          const data = await response.json();
+          const select = document.getElementById("servers");
+          select.innerHTML = '<option value="">-- Choose Server --</option>';
+          if (data.servers?.length) {
+            data.servers.forEach((server) => {
+              const option = new Option(server.serverName, server.serverId);
+              select.add(option);
+            });
+            select.disabled = false;
+            showToast("🌍 Server list updated", "success");
+          } else {
+            showToast("⚠️ No servers available", "error");
+          }
+        } catch (error) {
+          showToast(`❌ Error: ${error.message}`, "error");
+        } finally {
+          hideOverlay();
+        }
+      }
+
+      async function login() {
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value.trim();
+        const serverId = document.getElementById("serverId").value.trim();
+        if (!username || !password || !serverId) {
+          showToast("🚨 Please complete all fields", "error");
+          return;
+        }
+        try {
+          showOverlay();
+          const response = await fetch("http://localhost:3000/api/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password, serverId }),
+          });
+          const data = await response.json();
+          if (data.playerId && data.token) {
+            // 隐藏登录表单
+            document.getElementById("loginForm").style.display = "none";
+            // 显示用户信息和日志组件
+            document.getElementById("userInfo").style.display = "block";
+            document.querySelector(".log-container").style.display = "flex";
+            // 更新用户信息
+            document.getElementById("userName").textContent = username;
+            // 禁用表单
+            disableForm(true);
+            // 连接 WebSocket
+            connectWebSocket(`ws://localhost:3000/ws?userId=${data.playerId}`);
+            showToast("🎉 Login successful!", "success");
+          } else {
+            showToast("⚠️ Invalid credentials", "error");
+          }
+        } catch (error) {
+          showToast(`❌ Connection error: ${error.message}`, "error");
+        } finally {
+          hideOverlay();
+        }
+      }
+
+      function connectWebSocket(url) {
+        if (ws) ws.close();
+        ws = new WebSocket(url);
+        ws.onopen = () =>
+          appendLog(
+            "info",
+            getCurrentDetailedTime(),
+            "Connected to game server"
+          );
+        ws.onmessage = (event) => {
+          let message = JSON.parse(event.data);
+          console.dir(event.data);
+          appendLog(message.level, message.timestamp, message.message);
+
+          // 头像设置
+          if (message.message.indexOf("wxHeadUrl") != -1) {
+            let userInfo = JSON.parse(message.message);
+            if (userInfo) {
+              // 更新头像和名称
+              document.querySelector("#userInfo img").src = userInfo.wxHeadUrl;
+              document.querySelector("#userName").textContent =
+                userInfo.nickName;
+              document.querySelector("#playerBelong").textContent =
+                userInfo.playerBelong;
+              document.querySelector("#playerId").textContent =
+                userInfo.playerId;
+            }
+          }
+        };
+        ws.onclose = () => {
+          appendLog(
+            "error",
+            getCurrentDetailedTime(),
+            "Connection closed. Game exit !"
+          );
+          showToast("Connection closed. Game exit !", "warn");
+        };
+        ws.onerror = (error) =>
+          appendLog("error", getCurrentDetailedTime(), ` ${error.message}`);
+      }
+
+      function getCurrentDetailedTime() {
+        // 创建 Date 对象
+        const now = new Date();
+
+        // 获取年、月、日
+        const year = now.getFullYear(); // 年份（四位数）
+        const month = String(now.getMonth() + 1).padStart(2, "0"); // 月份（0-11，需要 +1）
+        const day = String(now.getDate()).padStart(2, "0"); // 日期（1-31）
+
+        // 获取时、分、秒、毫秒
+        const hours = String(now.getHours()).padStart(2, "0"); // 小时（0-23）
+        const minutes = String(now.getMinutes()).padStart(2, "0"); // 分钟（0-59）
+        const seconds = String(now.getSeconds()).padStart(2, "0"); // 秒（0-59）
+        const milliseconds = String(now.getMilliseconds()).padStart(3, "0"); // 毫秒（0-999）
+
+        // 格式化时间
+        const formattedTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
+
+        return formattedTime;
+      }
+
+      function appendLog(level, timestamp, message) {
+        const logOutput = document.getElementById("logOutput");
+        const logItem = document.createElement("div");
+        logItem.className = "log";
+
+        // 根据日志等级设置颜色
+        let color;
+        switch (level.toLowerCase()) {
+          case "info":
+            color = "#3498db"; // 蓝色
+            break;
+          case "warning":
+            color = "#f39c12"; // 橙色
+            break;
+          case "error":
+            color = "#e74c3c"; // 红色
+            break;
+          default:
+            color = "#34495e"; // 默认灰色
+        }
+
+        // 生成日志内容
+        logItem.innerHTML = `
+    <span style="color: ${color}; font-weight: 600;">[${level.toUpperCase()}]</span>
+    <span style="color: #95a5a6;">[${timestamp}]</span> 
+    - ${message}
+  `;
+
+        // 保持日志倒序排列（最新在上）
+        if (logOutput.firstChild) {
+          logOutput.insertBefore(logItem, logOutput.firstChild);
+        } else {
+          logOutput.appendChild(logItem);
+        }
+
+        // 限制日志数量
+        if (++logCount > MAX_LOG_ITEMS) {
+          logOutput.removeChild(logOutput.lastChild);
+        }
+      }
+
+      function disableForm(disabled) {
+        const elements = [
+          "username",
+          "password",
+          "servers",
+          "loginBtn",
+          "fetchServersBtn",
+        ];
+        elements.forEach((id) => {
+          document.getElementById(id).disabled = disabled;
+        });
+      }
+    </script>
+  </body>
+</html>
