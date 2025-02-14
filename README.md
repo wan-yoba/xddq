@@ -1,3 +1,9 @@
+# 注意事项！
+> 本文来自于(https://github.com/gyn7561/xddq-assistant)[https://github.com/gyn7561/xddq-assistant]
+> 本想实现新功能，但不会抓包，遂放弃
+> 本文仅用于学习，针对此脚本获取到了收益， `你妈死了`
+> 使用请参考 下文 链接(寻道大千脚本自助)[https://docs.qq.com/doc/DY1FLc3ZnV093a3dp]
+
 # 寻道大千全自动脚本
 
 ## TODO(大概率会鸽的功能)
