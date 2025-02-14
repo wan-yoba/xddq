@@ -306,7 +306,7 @@
       <!-- 用户信息布局 -->
       <div id="userInfo" class="user-info">
         <div class="user-details">
-          <img src="https://thirdwx.qlogo.cn/" alt="User Avatar" />
+          <img src="https://thirdwx.qlogo.cn/mmopen/" alt="User Avatar" />
           <div class="user-info-text">
             <h2 id="userName">John Doe</h2>
             <p id="playerBelong">New York, USA</p>
@@ -362,7 +362,7 @@
         try {
           showOverlay();
           const response = await fetch(
-            `http://localhost:3000/api/servers?username=${encodeURIComponent(
+            `http://47.109.22.188:8010/api/servers?username=${encodeURIComponent(
               username
             )}&password=${encodeURIComponent(password)}`
           );
@@ -396,7 +396,7 @@
         }
         try {
           showOverlay();
-          const response = await fetch("http://localhost:3000/api/login", {
+          const response = await fetch("http://47.109.22.188:8010/api/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username, password, serverId }),
@@ -413,7 +413,7 @@
             // 禁用表单
             disableForm(true);
             // 连接 WebSocket
-            connectWebSocket(`ws://localhost:3000/ws?userId=${data.playerId}`);
+            connectWebSocket(`ws://47.109.22.188:8010/ws?userId=${data.playerId}`);
             showToast("🎉 Login successful!", "success");
           } else {
             showToast("⚠️ Invalid credentials", "error");

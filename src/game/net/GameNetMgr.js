@@ -217,7 +217,7 @@ class GameNetMgr {
       // 捕获未知协议数据并转换为十六进制字符串
       const hexString = Buffer.from(arrayBuffer).toString("hex").toUpperCase();
       //logger.info(`[未知协议] 数据: ${hexString}`);
-      logger.error(` 让我康康是什么错 ${error}`)
+      //logger.error(` 让我康康是什么错 ${error}`)
     }
   }
 
