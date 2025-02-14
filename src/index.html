@@ -267,19 +267,11 @@
         <h1>🎮 Game Login</h1>
         <div class="form-group">
           <label>Username</label>
-          <input
-            type="text"
-            id="username"
-            placeholder="Enter username"
-          />
+          <input type="text" id="username" placeholder="Enter username" />
         </div>
         <div class="form-group">
           <label>Password</label>
-          <input
-            type="password"
-            id="password"
-            placeholder="Enter password"
-          />
+          <input type="password" id="password" placeholder="Enter password" />
         </div>
         <button id="fetchServersBtn" onclick="fetchServerList()">
           🌐 Get Server List
@@ -326,6 +318,7 @@
       const MAX_LOG_ITEMS = 50;
       let logCount = 0;
       let ws = null;
+      let baseUrl = "";
 
       function showToast(message, type = "info") {
         const toast = document.createElement("div");
@@ -362,7 +355,7 @@
         try {
           showOverlay();
           const response = await fetch(
-            `http://47.109.22.188:8010/api/servers?username=${encodeURIComponent(
+            `${baseUrl}/api/servers?username=${encodeURIComponent(
               username
             )}&password=${encodeURIComponent(password)}`
           );
@@ -387,6 +380,10 @@
       }
 
       async function login() {
+        if (baseUrl == "" || baseUrl == null) {
+          showToast("🚨 Please config base request url !", "error");
+          return;
+        }
         const username = document.getElementById("username").value.trim();
         const password = document.getElementById("password").value.trim();
         const serverId = document.getElementById("serverId").value.trim();
@@ -396,7 +393,7 @@
         }
         try {
           showOverlay();
-          const response = await fetch("http://47.109.22.188:8010/api/login", {
+          const response = await fetch(`${baseUrl}/api/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username, password, serverId }),
@@ -413,7 +410,7 @@
             // 禁用表单
             disableForm(true);
             // 连接 WebSocket
-            connectWebSocket(`ws://47.109.22.188:8010/ws?userId=${data.playerId}`);
+            connectWebSocket(`ws://${baseUrl}/ws?userId=${data.playerId}`);
             showToast("🎉 Login successful!", "success");
           } else {
             showToast("⚠️ Invalid credentials", "error");
