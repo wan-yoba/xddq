@@ -319,6 +319,9 @@
       let logCount = 0;
       let ws = null;
       let baseUrl = "";
+      let reconnectAttempts = 0;
+      const maxReconnectAttempts = 5; // 最大重连次数
+      const reconnectInterval = 3000 * 10; // 重连间隔时间（毫秒）
 
       function showToast(message, type = "info") {
         const toast = document.createElement("div");
@@ -355,7 +358,7 @@
         try {
           showOverlay();
           const response = await fetch(
-            `${baseUrl}/api/servers?username=${encodeURIComponent(
+            `http://${baseUrl}/api/servers?username=${encodeURIComponent(
               username
             )}&password=${encodeURIComponent(password)}`
           );
@@ -393,7 +396,7 @@
         }
         try {
           showOverlay();
-          const response = await fetch(`${baseUrl}/api/login`, {
+          const response = await fetch(`http://${baseUrl}/api/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username, password, serverId }),
@@ -425,12 +428,14 @@
       function connectWebSocket(url) {
         if (ws) ws.close();
         ws = new WebSocket(url);
-        ws.onopen = () =>
+        ws.onopen = () => {
           appendLog(
             "info",
             getCurrentDetailedTime(),
             "Connected to game server"
           );
+          reconnectAttempts = 0; // 连接成功后重置重连次数
+        };
         ws.onmessage = (event) => {
           let message = JSON.parse(event.data);
           console.dir(event.data);
@@ -458,6 +463,27 @@
             "Connection closed. Game exit !"
           );
           showToast("Connection closed. Game exit !", "warn");
+
+          // 如果未超过最大重连次数，尝试重连
+          if (reconnectAttempts < maxReconnectAttempts) {
+            setTimeout(() => {
+              reconnectAttempts++;
+              appendLog(
+                "info",
+                getCurrentDetailedTime(),
+                `正在进行第 ${reconnectAttempts} 次重连...`
+              );
+              console.log(`重连链接 ${url} ！`)
+              connectWebSocket(url); // 重新连接
+            }, reconnectInterval);
+          } else {
+            appendLog(
+              "error",
+              getCurrentDetailedTime(),
+              "已达到最大重连次数。"
+            );
+            showToast("已达到最大重连次数。", "error");
+          }
         };
         ws.onerror = (error) =>
           appendLog("error", getCurrentDetailedTime(), ` ${error.message}`);
