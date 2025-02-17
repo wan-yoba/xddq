@@ -389,7 +389,7 @@
       const MAX_LOG_ITEMS = 50;
       let logCount = 0;
       let ws = null;
-      let baseUrl = "localhost:8012";
+      let baseUrl = "localhost:8082";
       let reconnectAttempts = 0;
       const maxReconnectAttempts = 5; // 最大重连次数
       const reconnectInterval = 3000 * 10; // 重连间隔时间（毫秒）
@@ -669,6 +669,7 @@
           this.heartbeatInterval = setInterval(() => {
             if (this.ws?.readyState === WebSocket.OPEN) {
               this.ws.send(JSON.stringify({ type: "heartbeat" }));
+              this.appendLog("info", JSON.stringify({ type: "heartbeat" }));
             }
           }, 30000);
         }

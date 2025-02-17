@@ -10,8 +10,8 @@ COPY . .
 # 安装依赖
 RUN npm install
 
-# 监听端口 3000
-EXPOSE 3000
+# 监听端口 8082
+EXPOSE 8082
 
 # 启动应用
 CMD ["node", "src/loaders/index.js"]

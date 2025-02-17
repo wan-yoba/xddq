@@ -134,3 +134,5 @@ nodejs
 account.js
 
 test*
+push_image.txt
+pull_image.txt

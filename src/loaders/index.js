@@ -64,8 +64,8 @@ app.post('/api/login', async (req, res) => {
 const startServer = async () => {
   await dependencyInjectorLoader();
 
-  const server = app.listen(8012, () => {
-    console.log("Server running on port 8012");
+  const server = app.listen(8082, () => {
+    console.log("Server running on port 8082");
   });
 
   // 在启动服务器后创建 WebSocketServer 实例

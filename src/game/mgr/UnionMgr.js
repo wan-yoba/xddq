@@ -149,7 +149,7 @@ export default class UnionMgr {
       logger.debug("[妖盟管理] 妖盟讨伐 妖盟领奖");
       GameNetMgr.inst.sendPbMsg(Protocol.S_UNION_BOSS_RECEIVE_REWARD, {}, null);
 
-      this.lastCheckTime = now;
+      this.lastCheckTime = now.setHours(23, 59, 59, 999).getTime();
     }
   }
 
