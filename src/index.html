@@ -253,11 +253,80 @@
         font-size: 1rem;
         margin: 0.5rem 0 0 0; /* 调整文本之间的间距 */
       }
+
+      /* 添加连接状态样式 */
+      .connection-status {
+        background: rgba(255, 255, 255, 0.9);
+        padding: 12px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        display: none;
+      }
+
+      .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #ccc;
+      }
+
+      .status-text {
+        color: #666;
+        font-weight: 500;
+      }
+
+      #connectionState {
+        color: #444;
+        font-weight: 600;
+      }
+
+      .reconnect-btn {
+        margin-left: auto;
+        padding: 6px 12px;
+        background: #3498db;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        display: none;
+      }
+      .status-indicator {
+        transition: background-color 0.3s ease;
+      }
+
+      .reconnect-btn {
+        transition: opacity 0.3s ease;
+      }
+      /* 状态颜色 */
+      [data-status="connected"] .status-indicator {
+        background: #2ecc71;
+      }
+      [data-status="connecting"] .status-indicator {
+        background: #f1c40f;
+      }
+      [data-status="reconnecting"] .status-indicator {
+        background: #e67e22;
+      }
+      [data-status="disconnected"] .status-indicator {
+        background: #e74c3c;
+      }
     </style>
   </head>
 
   <body>
     <div class="container">
+      <!-- 在container内的顶部添加连接状态指示器 -->
+      <div class="connection-status">
+        <div class="status-indicator"></div>
+        <span class="status-text">WebSocket: </span>
+        <span id="connectionState">未连接</span>
+        <button id="manualReconnect" class="reconnect-btn">↻ 重连</button>
+      </div>
+
       <div id="overlay" class="overlay" style="display: none">
         <div class="spinner"></div>
       </div>
@@ -313,12 +382,14 @@
         <div id="logOutput"></div>
       </div>
     </div>
+
     <div id="toast-container"></div>
+
     <script>
       const MAX_LOG_ITEMS = 50;
       let logCount = 0;
       let ws = null;
-      let baseUrl = "";
+      let baseUrl = "localhost:8012";
       let reconnectAttempts = 0;
       const maxReconnectAttempts = 5; // 最大重连次数
       const reconnectInterval = 3000 * 10; // 重连间隔时间（毫秒）
@@ -405,9 +476,10 @@
           if (data.playerId && data.token) {
             // 隐藏登录表单
             document.getElementById("loginForm").style.display = "none";
-            // 显示用户信息和日志组件
+            // 显示用户信息、日志组件以及链接状态
             document.getElementById("userInfo").style.display = "block";
             document.querySelector(".log-container").style.display = "flex";
+            document.querySelector(".connection-status").style.display = "flex";
             // 更新用户信息
             document.getElementById("userName").textContent = username;
             // 禁用表单
@@ -423,70 +495,6 @@
         } finally {
           hideOverlay();
         }
-      }
-
-      function connectWebSocket(url) {
-        if (ws) ws.close();
-        ws = new WebSocket(url);
-        ws.onopen = () => {
-          appendLog(
-            "info",
-            getCurrentDetailedTime(),
-            "Connected to game server"
-          );
-          reconnectAttempts = 0; // 连接成功后重置重连次数
-        };
-        ws.onmessage = (event) => {
-          let message = JSON.parse(event.data);
-          console.dir(event.data);
-          appendLog(message.level, message.timestamp, message.message);
-
-          // 头像设置
-          if (message.message.indexOf("wxHeadUrl") != -1) {
-            let userInfo = JSON.parse(message.message);
-            if (userInfo) {
-              // 更新头像和名称
-              document.querySelector("#userInfo img").src = userInfo.wxHeadUrl;
-              document.querySelector("#userName").textContent =
-                userInfo.nickName;
-              document.querySelector("#playerBelong").textContent =
-                userInfo.playerBelong;
-              document.querySelector("#playerId").textContent =
-                userInfo.playerId;
-            }
-          }
-        };
-        ws.onclose = () => {
-          appendLog(
-            "error",
-            getCurrentDetailedTime(),
-            "Connection closed. Game exit !"
-          );
-          showToast("Connection closed. Game exit !", "warn");
-
-          // 如果未超过最大重连次数，尝试重连
-          if (reconnectAttempts < maxReconnectAttempts) {
-            setTimeout(() => {
-              reconnectAttempts++;
-              appendLog(
-                "info",
-                getCurrentDetailedTime(),
-                `正在进行第 ${reconnectAttempts} 次重连...`
-              );
-              console.log(`重连链接 ${url} ！`)
-              connectWebSocket(url); // 重新连接
-            }, reconnectInterval);
-          } else {
-            appendLog(
-              "error",
-              getCurrentDetailedTime(),
-              "已达到最大重连次数。"
-            );
-            showToast("已达到最大重连次数。", "error");
-          }
-        };
-        ws.onerror = (error) =>
-          appendLog("error", getCurrentDetailedTime(), ` ${error.message}`);
       }
 
       function getCurrentDetailedTime() {
@@ -510,47 +518,6 @@
         return formattedTime;
       }
 
-      function appendLog(level, timestamp, message) {
-        const logOutput = document.getElementById("logOutput");
-        const logItem = document.createElement("div");
-        logItem.className = "log";
-
-        // 根据日志等级设置颜色
-        let color;
-        switch (level.toLowerCase()) {
-          case "info":
-            color = "#3498db"; // 蓝色
-            break;
-          case "warning":
-            color = "#f39c12"; // 橙色
-            break;
-          case "error":
-            color = "#e74c3c"; // 红色
-            break;
-          default:
-            color = "#34495e"; // 默认灰色
-        }
-
-        // 生成日志内容
-        logItem.innerHTML = `
-    <span style="color: ${color}; font-weight: 600;">[${level.toUpperCase()}]</span>
-    <span style="color: #95a5a6;">[${timestamp}]</span> 
-    - ${message}
-  `;
-
-        // 保持日志倒序排列（最新在上）
-        if (logOutput.firstChild) {
-          logOutput.insertBefore(logItem, logOutput.firstChild);
-        } else {
-          logOutput.appendChild(logItem);
-        }
-
-        // 限制日志数量
-        if (++logCount > MAX_LOG_ITEMS) {
-          logOutput.removeChild(logOutput.lastChild);
-        }
-      }
-
       function disableForm(disabled) {
         const elements = [
           "username",
@@ -563,6 +530,212 @@
           document.getElementById(id).disabled = disabled;
         });
       }
+
+      // 优化后的重连
+      class WSConnection {
+        constructor() {
+          this.ws = null;
+          this.reconnectAttempts = 0;
+          this.maxReconnectAttempts = 5;
+          this.baseReconnectInterval = 3000;
+          this.currentInterval = 3000;
+          this.url = "";
+          this.retryTimer = null;
+        }
+
+        connect(url) {
+          this.url = url;
+          this.cleanup();
+          this.updateStatus("connecting");
+
+          this.ws = new WebSocket(url);
+          this.bindEvents();
+        }
+
+        bindEvents() {
+          this.ws.onopen = () => {
+            this.handleOpen();
+            this.scheduleHeartbeat();
+          };
+
+          this.ws.onmessage = (e) => this.handleMessage(e);
+          this.ws.onclose = (e) => this.handleClose(e);
+          this.ws.onerror = (e) => this.handleError(e);
+        }
+
+        handleOpen() {
+          this.reconnectAttempts = 0;
+          this.currentInterval = this.baseReconnectInterval;
+          this.updateStatus("connected");
+          showToast("webSocket connect successful .", "success");
+        }
+
+        handleMessage(event) {
+          try {
+            const data = JSON.parse(event.data);
+            this.appendLog(data.level, data.message, data.timestamp);
+
+            // 更新用户信息
+            if (data.message?.indexOf("wxHeadUrl") != -1) {
+              this.updateUserInfo(JSON.parse(data.message));
+            }
+          } catch (error) {
+            this.appendLog("error", `消息解析失败: ${error.message}`);
+          }
+        }
+
+        handleClose(event) {
+          const reason = event.reason || "webSocket disconnected .";
+          this.appendLog("error", `连接关闭: ${reason}`);
+          this.updateStatus("reconnecting");
+          this.scheduleReconnect();
+        }
+
+        handleError(error) {
+          this.appendLog("error", `连接错误: ${error.message}`);
+          this.ws.close();
+        }
+
+        scheduleReconnect() {
+          if (this.reconnectAttempts < this.maxReconnectAttempts) {
+            this.reconnectAttempts++;
+            this.currentInterval *= 2; // 指数退避
+
+            this.retryTimer = setTimeout(() => {
+              this.appendLog(
+                "info",
+                `尝试第${this.reconnectAttempts}次重连...`
+              );
+              this.connect(this.url);
+            }, this.currentInterval);
+
+            this.updateUIState();
+          } else {
+            this.updateStatus("disconnected");
+            showToast("达到最大重连次数", "error");
+          }
+        }
+
+        manualReconnect() {
+          clearTimeout(this.retryTimer);
+          this.reconnectAttempts = 0;
+          this.connect(this.url);
+        }
+
+        updateStatus(state) {
+          const statusMap = {
+            connected: "已连接",
+            connecting: "连接中...",
+            reconnecting: `重连中 (${this.reconnectAttempts}/${this.maxReconnectAttempts})`,
+            disconnected: "已断开",
+          };
+
+          const indicator = document.querySelector(".status-indicator");
+          const stateElement = document.getElementById("connectionState");
+          const reconnectBtn = document.getElementById("manualReconnect");
+
+          // 更新状态属性
+          document.querySelector(".connection-status").dataset.status = state;
+
+          // 更新显示文本
+          stateElement.textContent = statusMap[state];
+
+          // 控制重连按钮
+          reconnectBtn.style.display = [
+            "reconnecting",
+            "disconnected",
+          ].includes(state)
+            ? "block"
+            : "none";
+        }
+
+        updateUserInfo(userInfo) {
+          console.log("updateUserInfo ~");
+          console.dir(userInfo);
+          const updateElement = (selector, value) => {
+            const el = document.querySelector(selector);
+            if (el) el.textContent = value;
+          };
+
+          const img = document.querySelector("#userInfo img");
+          if (img) img.src = userInfo.wxHeadUrl;
+
+          updateElement("#userName", userInfo.nickName);
+          updateElement("#playerBelong", userInfo.playerBelong);
+          updateElement("#playerId", userInfo.playerId);
+        }
+
+        scheduleHeartbeat() {
+          this.heartbeatInterval = setInterval(() => {
+            if (this.ws?.readyState === WebSocket.OPEN) {
+              this.ws.send(JSON.stringify({ type: "heartbeat" }));
+            }
+          }, 30000);
+        }
+
+        cleanup() {
+          clearInterval(this.heartbeatInterval);
+          if (this.ws) {
+            this.ws.removeAllListeners();
+            this.ws.close();
+          }
+        }
+
+        appendLog(level, message, timestamp = getCurrentDetailedTime()) {
+          const logOutput = document.getElementById("logOutput");
+          const logItem = document.createElement("div");
+          logItem.className = "log";
+
+          // 颜色配置对象
+          const colorMap = {
+            info: "#3498db",
+            warning: "#f39c12",
+            error: "#e74c3c",
+            default: "#34495e",
+          };
+
+          // 获取对应颜色
+          const logLevel = level.toLowerCase();
+          const color = colorMap[logLevel] || colorMap.default;
+
+          logItem.innerHTML = `
+    <span style="color: ${color}; font-weight: 600;">[${logLevel.toUpperCase()}]</span>
+    <span style="color: #95a5a6;">[${timestamp}]</span> 
+    - ${message}
+  `;
+
+          // 使用 prepend 代替 insertBefore 更简洁
+          logOutput.prepend(logItem);
+
+          // 优化日志数量控制
+          if (logOutput.children.length > MAX_LOG_ITEMS) {
+            logOutput.lastElementChild?.remove();
+          }
+        }
+      }
+
+      // 初始化WebSocket管理实例
+      const wsManager = new WSConnection();
+
+      // 在登录成功后调用
+      function connectWebSocket(url) {
+        console.log(" webSocket ", url);
+        wsManager.connect(url);
+      }
+
+      // 绑定手动重连按钮
+      document
+        .getElementById("manualReconnect")
+        .addEventListener("click", () => {
+          wsManager.manualReconnect();
+        });
+
+      // 添加页面可见性监听
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible" && !wsManager.ws) {
+          wsManager.manualReconnect();
+        }
+      });
     </script>
   </body>
 </html>

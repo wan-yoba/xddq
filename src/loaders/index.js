@@ -64,8 +64,8 @@ app.post('/api/login', async (req, res) => {
 const startServer = async () => {
   await dependencyInjectorLoader();
 
-  const server = app.listen(3000, () => {
-    console.log("Server running on port 3000");
+  const server = app.listen(8012, () => {
+    console.log("Server running on port 8012");
   });
 
   // 在启动服务器后创建 WebSocketServer 实例
@@ -81,7 +81,12 @@ const startServer = async () => {
 
     // 可在这里添加 ws 的事件监听器，例如 message, close 等
     ws.on('message', (message) => {
-      console.log('Received message from client:', message);
+      console.log(`Received message from client: ${Buffer.from(message).toString("hex").toUpperCase()}`);
+    });
+
+    ws.on('close',()=>{
+      ws.send('server exited .')
+      GameNetMgr.inst.close();
     });
   });
 
