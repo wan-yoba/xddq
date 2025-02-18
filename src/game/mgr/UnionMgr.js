@@ -7,6 +7,7 @@ import { log } from "async";
 
 export default class UnionMgr {
   constructor() {
+    this.handleUnion = false;
     this.unionId = UserMgr.unionId; // 妖盟ID
     this.memberNum = null; // 妖盟成员数量
     this.memberList = null; // 妖盟成员列表
@@ -137,7 +138,7 @@ export default class UnionMgr {
 
   fightBoss() {
     const now = Date.now();
-    if (now - this.lastCheckTime >= this.CHECK_CD) {
+    if (now - this.lastCheckTime >= this.CHECK_CD && this.handleUnion == false) {
       logger.info("[妖盟管理] 妖盟讨伐 妖盟布阵");
       GameNetMgr.inst.sendPbMsg(Protocol.S_UNION_BOSS_ARRAYING, {}, null);
       // TODO
@@ -149,7 +150,8 @@ export default class UnionMgr {
       logger.debug("[妖盟管理] 妖盟讨伐 妖盟领奖");
       GameNetMgr.inst.sendPbMsg(Protocol.S_UNION_BOSS_RECEIVE_REWARD, {}, null);
 
-      this.lastCheckTime = now.setHours(23, 59, 59, 999).getTime();
+      this.handleUnion = true;
+      this.lastCheckTime = now;
     }
   }
 

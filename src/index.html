@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Game Login</title>
+    <title>醉后不知天在水，满船清梦压星河</title>
     <style>
       /* 基础样式重置 */
       * {
@@ -254,6 +254,12 @@
         margin: 0.5rem 0 0 0; /* 调整文本之间的间距 */
       }
 
+      .logout-btn {
+        background: #ff4757;
+        margin-left: auto;
+        width: auto;
+      }
+
       /* 添加连接状态样式 */
       .connection-status {
         background: rgba(255, 255, 255, 0.9);
@@ -293,6 +299,7 @@
         border-radius: 4px;
         cursor: pointer;
         display: none;
+        width: auto;
       }
       .status-indicator {
         transition: background-color 0.3s ease;
@@ -346,7 +353,7 @@
           🌐 Get Server List
         </button>
 
-        <div class="form-group">
+        <div class="form-group" style="margin-top: 1.5rem">
           <label>Select Server</label>
           <select id="servers" onchange="updateServerId()" disabled>
             <option value="">-- Choose Server --</option>
@@ -373,6 +380,9 @@
             <p id="playerBelong">New York, USA</p>
             <p id="playerId">User ID: 123456</p>
           </div>
+          <button class="logout-btn" onclick="logout()">
+            <i class="icon-exit"></i> 退出
+          </button>
         </div>
       </div>
 
@@ -419,6 +429,7 @@
         document.getElementById("overlay").style.display = "none";
       }
 
+      // 获取服务器
       async function fetchServerList() {
         const username = document.getElementById("username").value.trim();
         const password = document.getElementById("password").value.trim();
@@ -453,6 +464,7 @@
         }
       }
 
+      // 登陆
       async function login() {
         if (baseUrl == "" || baseUrl == null) {
           showToast("🚨 Please config base request url !", "error");
@@ -474,18 +486,20 @@
           });
           const data = await response.json();
           if (data.playerId && data.token) {
-            // 隐藏登录表单
-            document.getElementById("loginForm").style.display = "none";
-            // 显示用户信息、日志组件以及链接状态
-            document.getElementById("userInfo").style.display = "block";
-            document.querySelector(".log-container").style.display = "flex";
-            document.querySelector(".connection-status").style.display = "flex";
-            // 更新用户信息
-            document.getElementById("userName").textContent = username;
-            // 禁用表单
-            disableForm(true);
-            // 连接 WebSocket
-            connectWebSocket(`ws://${baseUrl}/ws?userId=${data.playerId}`);
+            // 创建会话对象
+            const userSession = {
+              baseUrl: baseUrl,
+              playerId: data.playerId,
+              token: data.token,
+              username: username,
+              serverId: serverId,
+              lastActive: Date.now(),
+            };
+
+            // 单次存储会话对象
+            localStorage.setItem("userSession", JSON.stringify(userSession));
+
+            loginSuccess(baseUrl, data.playerId, username);
             showToast("🎉 Login successful!", "success");
           } else {
             showToast("⚠️ Invalid credentials", "error");
@@ -495,6 +509,46 @@
         } finally {
           hideOverlay();
         }
+      }
+
+      // 退出
+      async function logout() {
+        showOverlay();
+
+        const response = await fetch(`http://${baseUrl}/api/logout`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        const data = await response.json();
+        if (data.logout) {
+          this.cleanup(); //ws
+          this.updateStatus("disconnected"); //connect
+          localStorage.removeItem("userSession"); // session
+          localStorage.removeItem("userInfo");
+          this.showToast("user logout . websocket disconnected");
+          this.appendLog("info", "user logout . websocket disconnected");
+        }
+
+        hideOverlay();
+      }
+
+      // 登陆成功
+      function loginSuccess(baseUrl, playerId, username) {
+        // 隐藏登录表单
+        document.getElementById("loginForm").style.display = "none";
+        // 显示用户信息、日志组件以及链接状态
+        document.getElementById("userInfo").style.display = "block";
+        document.querySelector(".log-container").style.display = "flex";
+        document.querySelector(".connection-status").style.display = "flex";
+
+        // 更新用户信息
+        document.getElementById("userName").textContent = username;
+
+        // 禁用表单
+        disableForm(true);
+
+        // 连接 WebSocket
+        connectWebSocket(`ws://${baseUrl}/ws?userId=${playerId}`);
       }
 
       function getCurrentDetailedTime() {
@@ -531,7 +585,21 @@
         });
       }
 
-      // 优化后的重连
+      function setAvatar(userInfo) {
+        const updateElement = (selector, value) => {
+          const el = document.querySelector(selector);
+          if (el) el.textContent = value;
+        };
+
+        const img = document.querySelector("#userInfo img");
+        if (img) img.src = userInfo.wxHeadUrl;
+
+        updateElement("#userName", userInfo.nickName);
+        updateElement("#playerBelong", `📍 ${userInfo.playerBelong}`);
+        updateElement("#playerId", `# ${userInfo.playerId}`);
+      }
+
+      // ws
       class WSConnection {
         constructor() {
           this.ws = null;
@@ -612,7 +680,8 @@
             this.updateUIState();
           } else {
             this.updateStatus("disconnected");
-            showToast("达到最大重连次数", "error");
+            this.appendLog("error", `达到最大重连次数. 请重新登录游戏`);
+            showToast("达到最大重连次数. 请重新登录游戏", "error");
           }
         }
 
@@ -641,28 +710,16 @@
           stateElement.textContent = statusMap[state];
 
           // 控制重连按钮
-          reconnectBtn.style.display = [
-            "reconnecting",
-            "disconnected",
-          ].includes(state)
+          reconnectBtn.style.display = ["reconnecting"].includes(state)
             ? "block"
             : "none";
         }
 
         updateUserInfo(userInfo) {
-          console.log("updateUserInfo ~");
-          console.dir(userInfo);
-          const updateElement = (selector, value) => {
-            const el = document.querySelector(selector);
-            if (el) el.textContent = value;
-          };
+          // 单次存储会话对象
+          localStorage.setItem("userInfo", JSON.stringify(userInfo));
 
-          const img = document.querySelector("#userInfo img");
-          if (img) img.src = userInfo.wxHeadUrl;
-
-          updateElement("#userName", userInfo.nickName);
-          updateElement("#playerBelong", userInfo.playerBelong);
-          updateElement("#playerId", userInfo.playerId);
+          setAvatar(userInfo);
         }
 
         scheduleHeartbeat() {
@@ -677,7 +734,6 @@
         cleanup() {
           clearInterval(this.heartbeatInterval);
           if (this.ws) {
-            this.ws.removeAllListeners();
             this.ws.close();
           }
         }
@@ -720,7 +776,6 @@
 
       // 在登录成功后调用
       function connectWebSocket(url) {
-        console.log(" webSocket ", url);
         wsManager.connect(url);
       }
 
@@ -735,6 +790,40 @@
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "visible" && !wsManager.ws) {
           wsManager.manualReconnect();
+        }
+      });
+
+      // 页面加载
+      document.addEventListener("DOMContentLoaded", () => {
+        const sessionData = localStorage.getItem("userSession");
+        const userInfoData = localStorage.getItem("userInfo");
+
+        // auth
+        if (sessionData) {
+          try {
+            const userSession = JSON.parse(sessionData);
+            const userInfo = JSON.parse(userInfoData);
+
+            if (
+              userSession.baseUrl &&
+              userSession.playerId &&
+              userSession.token
+            ) {
+              loginSuccess(baseUrl, userSession.playerId, userSession.username);
+
+              // 更新最后活跃时间
+              userSession.lastActive = Date.now();
+              localStorage.setItem("userSession", JSON.stringify(userSession));
+            }
+
+            //
+            if (userInfo.playerId == userSession.playerId) {
+              setAvatar(userInfo);
+            }
+          } catch (e) {
+            console.error("Session parse error:", e);
+            localStorage.removeItem("userSession");
+          }
         }
       });
     </script>
