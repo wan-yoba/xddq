@@ -29,9 +29,13 @@ export default async () => {
         .status(400)
         .json({ error: "Username and password are required" });
     }
-    if (token != "xiangwan") {
+
+    // token 验证
+    let configToken = global.account.loginToken;
+    if (configToken && token != configToken) {
       return res.status(400).json({ error: "invalid token !" });
     }
+
     try {
       const authServiceInstance = new AuthService();
       const serverList = await authServiceInstance.List(username, password);
@@ -52,9 +56,9 @@ export default async () => {
         const filePath = global.configFile;
 
         const newObject = {
-          "serverId": serverId,
-          "username": username,
-          "password": password,
+          serverId: serverId,
+          username: username,
+          password: password,
         };
 
         await updateAccount(filePath, newObject);

@@ -34,3 +34,36 @@ yarn && yarn start
 ```bash
 pm2 start app.js --cron "1 0 * * *"
 ```
+
+## 网页使用方法
+
+### docker 部署
+
+* docker 容器，windows 电脑需要安装 `docker-desktop`
+* docker 命令，需要切到项目主目录，执行以下命令
+```
+// 创建镜像
+docker build -t xddq-image .
+
+// 运行容器
+docker run --name=xddq -dp 8082:8082 --restart=always -e TZ=Asia/Shanghai xddq-image
+
+那么此时访问你的IP 例如 1.1.1.1:8082 就能请求到接口
+
+// 构建 ui
+// 将Nginx 80 端口映射至宿主机8083，并获取Ngix
+docker run --name xddq-web -dp 8083:80 -v "$(pwd)/index.html:/usr/share/nginx/html/index.html" nginx
+
+此时访问 你的IP，如 1.1.1.1:8083 将能看到界面
+
+如果是本机，可以不用部署ui界面，直接点击 index.html 即可
+
+```
+* 记得更改 `index.html` 中的 `baseUrl`，将 localhost 改为对应的ip地址，这是在服务器上面的操作
+* 有设置 `token` 在 `account.js` 中，将 `loginToken` 的值设定为自己想要的即可，如果不设置将不验证
+
+### windows 应用
+* 请下载 nodejs 的windows组件，切入目录，使用以下命令 `npm run start`
+
+### windows 打包可执行文件
+* TODO // 尚未实现
