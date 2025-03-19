@@ -2,6 +2,12 @@
 ### **注意本库只能作为学习用途, 造成的任何问题与本库开发者无关, 如侵犯到你的权益，请联系删除。**
 ### **注意本库只能作为学习用途, 造成的任何问题与本库开发者无关, 如侵犯到你的权益，请联系删除。**
 
+# 注意事项！
+> 本文来自于(https://github.com/gyn7561/xddq-assistant)[https://github.com/gyn7561/xddq-assistant] <br/>
+> 本文来自于[https://github.com/gyn7561/xddq-assistant](https://github.com/gyn7561/xddq-assistant) <br/>
+> 本想实现新功能，但不会抓包，遂放弃 <br/>
+> 本文仅用于学习，针对此脚本获取到了收益， `你妈死了` <br/>
+> 使用请参考 下文 链接(寻道大千脚本自助)[https://docs.qq.com/doc/DY1FLc3ZnV093a3dp]
 
 # dqzs
 自动任务工具
