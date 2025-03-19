@@ -69,3 +69,11 @@ docker run --name xddq-web -dp 8083:80 -v "$(pwd)/index.html:/usr/share/nginx/ht
 
 ## 效果图例
 
+### 登陆界面
+![image](https://github.com/user-attachments/assets/14bfa4b5-abcd-4c63-a26f-f2f9f570f781)
+
+### 主界面
+![image](https://github.com/user-attachments/assets/3614f840-5748-4eee-88e3-798c3b768a5c)
+
+
+
