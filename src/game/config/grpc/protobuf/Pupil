@@ -17,6 +17,7 @@ enum PupilPb {
 	S_PUPIL_LOGIN_SYNC = 211813;                      
 	S_PUPIL_GET_AD_AWARD = 211814;                    
     S_PUPIL_LOCK = 211815;                            
+    S_PUPIL_EXACT_SEARCH = 211816;                    
     S_MARRIAGE_USER_DATA_SYNC    = 211850;           
 	S_MARRIAGE_GET_APPOINT_APPLY_SYNC = 211851;      
     S_PUPIL_GRADUATED_UNMARRY_LIST_SYNC = 211852;    
@@ -69,7 +70,7 @@ message PupilDataMsg {
     repeated AttributeDataMsg baseAttr = 9;     
     optional AttributeDataMsg battleAttr = 10;  
     optional CoupleDataMsg coupleData = 11;     
-    optional int64 pupilFightValue = 12;        
+    optional string pupilFightValue = 12;        
     optional int32 evaluateParam = 13;          
     optional int32 isLock =14; 
 }
@@ -88,7 +89,7 @@ message SectInfoMsg {
 message PupilRank{
     optional int64 playerId = 1;                
     optional string ownerName = 2;                
-    optional int64 fightValue = 3;                
+    optional string fightValue = 3;                
     optional PupilDataMsg pupilData = 4;          
 }
 message FightPupilDataMsg{
@@ -182,4 +183,12 @@ message PupilLockReq{
 }
 message PupilLockResp{
     required int32  ret = 1;
+}
+message PupilExactSearchReq{
+    optional int32 firstType = 1; 
+    optional int32 secondType = 2; 
+}
+message PupilExactSearchResp{
+    required int32  ret = 1;
+    repeated PupilDataMsg pupilDataList = 2;
 }

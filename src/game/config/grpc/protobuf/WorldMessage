@@ -16,6 +16,7 @@ import "WatchPlayer";
         optional string ip = 12;                              
         optional AtPlayerInfo atPlayerInfo = 13;              
         optional int64 friendPlayerId = 14;                   
+        optional string classifyTag = 15;                     
     }
     message AtPlayerInfo {
         optional int64 playerId = 1; 
@@ -31,6 +32,7 @@ import "WatchPlayer";
         optional int32 contentType = 4; 
         optional AtPlayerInfo atPlayerInfo = 5;   
         optional int64 friendPlayerId = 6; 
+        optional string classifyTag = 7; 
     }
     message WorldChatRespMsg {
         required int32 ret =1;        
@@ -55,6 +57,7 @@ import "WatchPlayer";
     }
     message SystemChatReqMsg {
         optional int32  eMessageType =1;  
+        optional string classifyTag = 2; 
     }
     message WorldChatBlockReqMsg {
         required int64 playerId = 1;
@@ -161,4 +164,7 @@ message PlayerEmoticonDataSync{
 message SingleEmoticonInfo{
     optional int32 id = 1;
     optional int64 endTime = 2;
+}
+message SyncPlayerChatShieldMsg {
+    optional int64 shieldMessageTime = 1;
 }

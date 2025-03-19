@@ -36,12 +36,14 @@ package com.yq.msg.CityMsg;
     message MailGetRewardResp {
         required int32 ret = 1;
         optional string reward = 2;    
+        optional int32 isExpire = 3;    
     }
     message MailGetAllRewardReq {
     }
     message MailGetAllRewardResp {
         required int32 ret = 1;
         optional string reward = 2;    
+        optional int32 isExpire = 3;    
     }
     message MailDeleteReq {
         required string mailUid = 1;             

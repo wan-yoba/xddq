@@ -1,0 +1,96 @@
+package com.yq.msg.CityMsg;
+import "Battle";
+import "Common";
+message UnionDuelApplyReq{
+}
+message UnionDuelApplyResp{
+  required int32 ret = 1;
+}
+message UnionDuelOpenListViewReq{
+  required int64 unionId = 1;
+  required int32 type = 2;     
+  required int32 listType = 3; 
+}
+message UnionDuelOpenListViewResp{
+  required int32 ret = 1;
+  repeated UnionDuelMemberMsg memberInfoList = 2; 
+  repeated UnionDuelBattleNoticeMsg noticeList = 3; 
+}
+message UnionDuelMemberMsg {
+  optional UnionDuelPlayerBaseMsg memberInfo = 1; 
+  optional double hpPercent = 2; 
+  optional int32 lifeCount = 3; 
+}
+message UnionDuelPlayerBaseMsg {
+  optional int64 playerId = 1; 
+  optional string nickName = 2; 
+  optional int32 realmsId = 3; 
+  optional string fightValue = 4; 
+  optional int32 appearanceId = 5; 
+  optional int64 serverId = 6; 
+  optional int32 titleId = 7;
+  optional int32 equipCloudId = 8; 
+}
+message UnionDuelFightReq{
+  required int64 playerId = 1;
+  optional double hpPercent = 2; 
+}
+message UnionDuelFightResp{
+  required int32 ret = 1;
+  optional bool isWin = 2; 
+  optional UnionDuelFightPlayerMsg oppoInfo = 3; 
+  optional BattleRecordMsg allBattleRecord = 4;           
+  optional AwardInfoList reward = 5; 
+  optional string targetMaxHp = 6; 
+}
+message UnionDuelFightPlayerMsg {
+  optional string nickName = 1;    
+  optional int32 headIcon = 2;    
+  optional string wxHeadUrl = 3;  
+  optional int32 equipHeadIconFrame = 4; 
+}
+message UnionDuelOpenBattleNoticeReq{
+  required int64 unionId = 1;
+  required int32 level = 2; 
+  required int32 listType = 3; 
+}
+message UnionDuelOpenBattleNoticeResp{
+  required int32 ret = 1;
+  repeated UnionDuelBattleNoticeMsg noticeList = 2; 
+}
+message UnionDuelBattleNoticeMsg{
+  optional string playerName1 = 1;    
+  optional string playerName2 = 2;    
+  optional int32 noticeType = 3;      
+  optional int64 time = 4;            
+}
+message UnionDuelContributeReq{
+  required int64 unionId = 1;
+  required int32 type = 2; 
+}
+message UnionDuelContributeResp{
+  required int32 ret = 1;
+  repeated UnionDuelContributeMsg list = 2; 
+  optional int32 myTime = 3; 
+  optional int32 myStar = 4; 
+}
+message UnionDuelContributeMsg {
+  optional int64 playerId = 1; 
+  optional int64 serverId = 2; 
+  optional string nickName = 3; 
+  optional int32 realmsId = 4; 
+  optional int32 titleId = 5;
+  optional int32 headIcon = 6;    
+  optional string wxHeadUrl = 7;  
+  optional int32 equipHeadIconFrame = 8; 
+  optional int32 Times = 9; 
+  optional int32 star = 10; 
+}
+message UnionDuelRewardPreviewReq{
+  required int64 unionId = 1;
+}
+message UnionDuelRewardPreviewResp{
+  required int32 ret = 1;
+  optional int32 curRank = 2; 
+  optional int32 rewardBuff = 3; 
+}

@@ -18,7 +18,7 @@ import "Attribute";
     message UnDealTalentDataMsg {
         required TalentDataMsg talentData = 1; 
         repeated AttributeDataMsg playerAttributeData = 2; 
-        required int64 fightValue = 3; 
+        required string fightValue = 3; 
     }
     message DealTalentReq {
         optional int32 index = 1; 

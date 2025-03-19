@@ -386,10 +386,12 @@ message GodDemonBattlePlayerPrepareSync{
 }
 message GodDemonReportReq {
     required int32 activityId = 1;
+    optional int32 type = 2; 
 }
 message GodDemonReportRsp {
   required int32 ret = 1;
   repeated GodDemonReportData logData = 2; 
+  optional int32 type = 3; 
 }
 message GodDemonReportData {
   required GodDemonPlayerInfoMsg playerData = 1; 

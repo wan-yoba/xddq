@@ -13,6 +13,7 @@ class DBMgr {
         this.LanguageWordDB = {};       // i18n
         this.SpiritsDB = {};            // 精怪
         this.GameSkillDB = {};          // 神通
+        this.SystemInfoDB = {};         // 系统解锁/妖途
         this.initialized = false;
         this.basePath = resolvePath('../config/db');
     }
@@ -37,7 +38,9 @@ class DBMgr {
             'EquipmentQualityDB.json': 'EquipmentQualityDB',
             'LanguageWordDB.json': 'LanguageWordDB',
             'SpiritsDB.json': 'SpiritsDB',
-            'GameSkillDB.json': 'GameSkillDB'
+            'GameSkillDB.json': 'GameSkillDB',
+            'RealmsDB.json': 'RealmsDB',
+            'SystemInfoDB.json': 'SystemInfoDB'
         };
 
         try {
@@ -48,10 +51,30 @@ class DBMgr {
             });
 
             await Promise.all(readPromises);
+
             logger.debug('All databases initialized successfully.');
         } catch (error) {
             logger.error('Error initializing databases:', error);
         }
+    }
+
+    getPreviewSystemIdList() {
+        const t = Object.keys(this.SystemInfoDB);
+        const previewSystemIdList = [];
+        for (let e = 0; e < t.length; ++e) {
+            if (this.SystemInfoDB[t[e]].reward !== "0") {
+                previewSystemIdList.push(+t[e]);
+            }
+        }
+        return previewSystemIdList;
+    }
+
+    getRealms(id) {
+        return this.RealmsDB[id] || null;
+    }
+
+    getLanguageWord(id) {
+        return this.LanguageWordDB[id]?.zh_cn || '未知';
     }
 
     getEquipment(id) {
@@ -67,7 +90,7 @@ class DBMgr {
         if (!equipment) {
             return '未知装备';
         }
-        return this.LanguageWordDB[equipment]?.zh_cn || '未知装备';
+        return this.getLanguageWord(equipment);
     }
 
     getAttribute(id) {
@@ -75,4 +98,4 @@ class DBMgr {
     }
 }
 
-export { DBMgr };
+export default DBMgr;

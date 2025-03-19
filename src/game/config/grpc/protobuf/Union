@@ -1,6 +1,7 @@
 package com.yq.msg.CityMsg;
 import "WatchPlayer";
-import "RedPoint";        
+import "RedPoint";   
+import "Common";     
 message MyUnionData {
     optional UnionBaseData baseData = 1;            
     optional string notice = 2;                     
@@ -10,9 +11,14 @@ message MyUnionData {
     optional string WCcode = 6;                     
     repeated UnionGradeData gradeList = 7;         
     optional int32 recruitCount = 8;                
+    optional UnionHonorData honorData = 9;          
 }
 message UnionFlagData {
     optional int32 unionFlagId = 1;
+    optional int64 expireTime = 2;
+}
+message UnionNameTitleData {
+    optional int32 unionNameTitleId = 1;
     optional int64 expireTime = 2;
 }
 message UnionTimeMsg {
@@ -23,8 +29,12 @@ message OtherUnionData {
     optional UnionBaseData baseData = 1;            
     optional string leaderName = 2;                 
     optional int32 amount = 3;                      
-    optional int64 fightValue = 4;                  
+    optional string fightValue = 4;                  
     repeated UnionGradeData gradeList = 5;         
+    optional UnionBuildDatas unionBuildDatas = 6; 
+    optional UnionHonorHallData unionHallData = 7;
+    optional int64 flyTime = 8; 
+    optional int32 useUnionHonorHallTrophyId = 9;    
 }
 message UnionBaseData {
     optional int64 unionId = 1;                     
@@ -35,9 +45,10 @@ message UnionBaseData {
     optional int32 limitRealmsId = 6;               
     optional int64 serverId = 7;                    
     optional int32 memberNum = 8;                   
-    optional int32 dan = 9;                       
+    optional int32 dan = 9;                         
     optional int32 danStar = 10;                    
     optional bool cross = 11;                       
+    optional int32 unionNameTitleId = 12;            
 }
 message UnionMemberData {
     optional PlayerBaseDataMsg playerData = 1;      
@@ -381,4 +392,89 @@ message UnionPlayerGradeRankData{
 }
 message NotifyPlayerGradeMsg {
    optional PlayerGradeEnum myGrade = 1; 
+}
+message UnionFlyData {
+    optional bool isFly = 1; 
+    repeated int64 viewedFlyAniPlayerIds = 2; 
+    optional int64 flyTime = 3; 
+    optional int32 flyIndex = 4; 
+}
+message UnionSingleBuildInfo {
+    required int32 buildId = 1; 
+    optional int32 lv = 2; 
+}
+message UnionBuildDatas {
+    repeated UnionSingleBuildInfo buildInfos = 1; 
+}
+message UpgradeUnionBuildReq {
+    required int64 unionId = 1; 
+    required int32 buildId = 2; 
+}
+message UpgradeUnionBuildResp {
+    required int32  ret = 1;
+    optional UnionSingleBuildInfo newBuildInfo = 2; 
+}
+message GetYardUnionHelpDataListReq {
+}
+message GetYardUnionHelpDataListResp {
+    required int32 ret = 1;
+    repeated YardUnionHelpDataMsg unionHelpData = 2;
+    required int32 helpTimes = 3; 
+}
+message YardUnionHelpDataMsg {
+    optional UnionMemberData memberData = 1; 
+    repeated int64 helperList = 2; 
+    optional int32 helpTimes = 3; 
+    optional int64 createTime = 4; 
+    required int64 uniqueId = 5; 
+    required int32 buildId = 6; 
+    optional int32 buildLv = 7; 
+}
+message YardUnionHelpReq {
+    required int64 playerId = 1;
+    required int64 uniqueId = 2; 
+    required int32 buildId =3; 
+}
+message YardUnionHelpResp {
+    required int32 ret = 1;
+    repeated YardUnionHelpDataMsg unionHelpData = 2;
+}
+message UnionHonorData {
+    repeated UnionNameTitleData unionNameTitleData = 1; 
+    optional int32 useUnionHonorHallTrophyId = 2;       
+    repeated int32 canGetRewardTrophyIds = 3;           
+    optional UnionBuildDatas unionBuildDatas = 4;       
+    optional UnionFlyData unionFlyData = 5;             
+    optional UnionHonorHallData unionHallData = 6;
+}
+message UnionHonorHallData {
+    optional int64 honorScore = 1;          
+    optional int64 lastMonthHonorScore = 2; 
+    repeated UnionHonorHallTrophyData trophyData = 3; 
+}
+message UnionHonorHallTrophyData {
+    required int32 id = 1; 
+    optional int32 star = 2; 
+    optional int64 updateTime = 3; 
+}
+message UnionHonorSyncMsg {
+    optional UnionHonorData honorData = 1;
+}
+message UnionChangeUnionNameTitleReq {
+    required int64 unionId = 1;
+    required int32 unionNameTitleId = 2; 
+}
+message UnionChangeUnionNameTitleResp {
+    required int32 ret = 1;
+    optional int32 unionNameTitleId = 2;
+}
+message UnionHonorHallFlyReq {
+    required int64 unionId = 1;
+    optional bool isPlayAni = 2; 
+}
+message  UnionHonorHallFlyResp {
+    required int32 ret = 1;
+}
+message UnionHonorPeakRankGroupSync {
+    optional int32 groupId = 1; 
 }

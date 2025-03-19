@@ -9,6 +9,15 @@ message PlayerMagicDataMsg {
     optional MagicFreeAdData magicFreeAd = 7; 
     optional bool pieceShopOpen = 8; 
     optional int32 curUsePresetsIndex = 9; 
+    repeated MagicSeparationMarkMsg separationMarkMsg = 10;
+}
+message MagicSeparationMarkMsg{
+    optional int32 separationIdx = 1;
+    repeated MagicPresetsMarkMsg presetsMarkMsgList = 2;
+}
+message MagicPresetsMarkMsg{
+    optional int32 presetsIdx = 1;
+    repeated int32 markList = 2;
 }
 message MagicFreeAdData{
     optional int32 freeTimes = 1; 
@@ -116,4 +125,25 @@ message MagicSwitchPresetsReq{
 }
 message MagicSwitchPresetsResp {
     required int32 ret = 1;
+}
+message GetPresetMagicInfoReq {
+    required int32 godBodyIndex = 1; 
+    required int32 presetIndex = 2; 
+}
+message GetPresetMagicInfoResp {
+    required int32 ret = 1;
+    repeated MagicDataMsg magicData = 2; 
+    repeated int32 equipMagicList = 3; 
+}
+message UnEquipStoneReq {
+    required int32 godBodyIndex = 1;
+    required int32 presetIndex = 2;
+    required bool all = 3;
+    optional int32 magicId = 4;
+    optional int32 stoneIndex = 5;
+}
+message UnEquipStoneResp {
+    required int32 ret = 1;
+    repeated MagicDataMsg magicData = 2; 
+    repeated MagicMarkMsg magicStone = 3; 
 }

@@ -4,7 +4,7 @@ import "Common";
 message UnionBossInfoReqMsg{}
 message UnionBossInfoRespMsg{
   required int32 ret = 1;
-  optional int64 totalDamage = 2; 
+  optional string totalDamage = 2; 
   repeated int32 received = 3; 
   optional UnionBossMsg boss = 4; 
   optional UnionBossBuff buff = 5; 
@@ -13,8 +13,8 @@ message UnionBossInfoRespMsg{
 }
 message UnionBossMsg {
   optional int32 configId = 1;
-  optional int64 maxHp =2;
-  optional int64 leftHp = 3;
+  optional string maxHp =2;
+  optional string leftHp = 3;
 }
 message UnionBossBuff {
   repeated AttributeDataMsg attrs = 1; 
@@ -42,10 +42,10 @@ message UnionBossBattleReqMsg {}
 message UnionBossBattleRespMsg {
   optional int32 ret = 1;
   optional BattleRecordMsg allBattleRecord = 2; 
-  optional int64 damage = 3;
+  optional string damage = 3;
   optional string rewards = 4; 
   optional int32  battleCount = 5; 
-  optional uint64 totalDamage = 6; 
+  optional string totalDamage = 6; 
   optional UnionBossMsg boss = 7; 
 }
 message UnionBossBattleRecord {
@@ -54,7 +54,7 @@ message UnionBossBattleRecord {
   optional int32 monsterId =3; 
   optional int32 type = 4; 
   optional int32 rewardNum = 5; 
-  optional int64 damage = 6; 
+  optional string damage = 6; 
   optional int64 time = 7; 
 }
 message UnionBossAchieveRewardReqMsg {

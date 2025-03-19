@@ -360,3 +360,10 @@ message BallGVGAbilityRankRespMsg {
 message BallGVGEndDataSyncMsg {
   required BallGVGEndDataTemp endData = 1;
 }
+message BallGVGRedDotReqMsg {
+  required int32 activityId = 1;
+}
+message BallGVGRedDotRespMsg {
+  required int32 ret = 1;
+  optional string data = 2;
+}

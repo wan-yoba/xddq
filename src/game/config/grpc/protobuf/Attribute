@@ -3,10 +3,11 @@ import "Common";
 import "PlayerChara";
 import "Talent";
 import "Spirit";
+import "Magic";
     message PlayerAttributeDataMsg {
         required int32 realmsId = 1;                                       
         required string exp = 2;                                           
-        optional int64 fightValue = 3;                                     
+        optional string fightValue = 3;                                     
         repeated AttributeDataMsg playerAttributeDataList = 4;             
         repeated EquipmentDataMsg equipmentList = 5;                       
         optional int32 useSeparationIdx = 6;
@@ -24,7 +25,7 @@ import "Spirit";
         optional int32 spiritBattleTeamNo = 7; 
         repeated int32 equipMagicList = 8; 
         optional int32 equipCloudId = 9; 
-        optional int64 fightValue = 10; 
+        optional string fightValue = 10; 
         repeated AttributeDataMsg playerAttributeDataList = 11; 
         optional int32 equipCloudSkinId = 12; 
         optional int32 curRuleProgrammeIdx = 13; 
@@ -32,6 +33,9 @@ import "Spirit";
         optional int32 equipAppearanceId = 15; 
         repeated EquipUniverseSkillMsg equipUniverseSkillMsg = 16; 
         optional int32 universeLevel = 17;  
+        repeated MagicDataMsg equipMagicMsgList = 18; 
+        optional int32 careerType = 19; 
+        optional int32 equipAtkEffect = 20; 
     }
     message PupilDetailDataMsg {
         repeated AttributeDataMsg baseAttr = 1;     
@@ -87,11 +91,12 @@ import "Spirit";
         optional int64 dreamLvUpEndTime = 3; 
         optional int64 freeSpeedUpCdEndTime = 4; 
         optional int32 freeSpeedUpTimes = 5; 
+        optional int32 dailyGoldenPeachCost = 6; 
     }
     message UnDealEquipmentDataMsg {
         required EquipmentDataMsg unDealEquipmentData = 1;              
         repeated AttributeDataMsg playerAttributeDataList = 2;          
-        required int64 fightValue = 3;                                  
+        required string fightValue = 3;                                  
     }
     message ReqDealEquipmentMsg {
         required DealEquipmentEnum type = 1;     

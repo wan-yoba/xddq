@@ -131,8 +131,11 @@ dist
 .pnp.*
 
 nodejs
-account.js
+
+account.json
+account*.json
 
 test*
-push_image.txt
-pull_image.txt
+.vscode
+
+data

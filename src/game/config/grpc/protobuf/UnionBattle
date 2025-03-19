@@ -170,3 +170,14 @@ message UnionMemberScore{
     optional string memberName = 2;
     optional int32 score = 3;
 }
+message UnionBattleRedDotReqMsg {
+    required int32 activityId = 1;
+}
+message UnionBattleRedDotRespMsg {
+    required int32 ret = 1;
+    optional string data = 2;
+}
+enum UnionBattleReportType{
+    UnionBattleReportType_All = 0;
+    UnionBattleReportType_Union = 1;
+}

@@ -100,6 +100,7 @@ enum SendGiftType{
   SendGiftType_Null = 0;
   SendGiftType_Palace = 1;
   SendGiftType_StarTrial = 2;
+  SendGiftType_DoubleSeventh = 3;
 }
 message GetSendGiftRewardReq{
   required string id =1;

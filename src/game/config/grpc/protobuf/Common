@@ -9,7 +9,7 @@ message EquipmentDataMsg{
 }
 message AttributeDataMsg{
     required int32 type = 1;
-    required int64 value = 2;
+    required string value = 2;
 }
 message PlayerEquipCloudDataMsg {
     optional int32 equipCloudId = 1;
@@ -34,4 +34,19 @@ message EquipUniverseSkillMsg {
     required int32 index = 1;
     required int32 skillId = 2; 
     optional int32 skillLv = 3;
+}
+message UnionServerIdData {
+    optional int64 unionId = 1; 
+    optional int64 serverId = 2; 
+}
+message UnionNameServerIdData {
+    optional string unionName = 1;                       
+    optional int64 serverId = 2;                         
+}
+message PlayerSuppressAttribute {
+  repeated EquipmentDataMsg equipList = 1; 
+  optional int32 preRealms = 2; 
+  optional int32 afterRealms = 3; 
+  repeated AttributeDataMsg preAttribute = 4;                
+  repeated AttributeDataMsg afterAttribute = 5;                
 }

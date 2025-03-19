@@ -16,6 +16,7 @@ message PetKernelDataMsg {
   required int32 kernelId = 1;  
   required int32 attachPet = 2; 
   required int32 star = 3;      
+  optional int32 resonanceLv = 4;
 }
 message PetKernelCombineMsg {
   required int32 combineId = 1;  
@@ -80,4 +81,11 @@ message PetKerneCombineUpLevelReq {
 message PetKerneCombineUpLevelResp {
   required int32 ret = 1;
   optional PetKernelCombineMsg combine = 2;
+}
+message ResonanceActiveReq {
+  optional int32 kernelId = 1;
+}
+message ResonanceActiveResp {
+  required int32 ret = 1;
+  optional PetKernelDataMsg petKernelData = 2;
 }

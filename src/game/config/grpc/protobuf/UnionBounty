@@ -50,6 +50,7 @@ message UnionBountyEnterMapResp {
     optional bool settlementRedPoint = 8;            
     optional bool askHelpRedPoint = 9;               
     repeated UnionBountyMonsterMsg monsterList = 10;   
+    optional int32 groupType = 11;                   
 }
 message UnionBountyOpenEscortCartDetailReq{
     optional int64 playerId = 1;
@@ -74,12 +75,12 @@ message UnionBountyEscortCartMsg {
     optional int32 robbedNum = 2;                      
     optional int64 startTime = 3;                      
     optional int32 energy = 4;                         
-	optional int64 maxBlood = 5;                       
-    optional int64 curBlood = 6;                       
+	optional string maxBlood = 5;                       
+    optional string curBlood = 6;                       
     optional int32 monsterId = 7;                      
     optional int32 npcId = 8;                          
     optional UnionBountyPlayerInfo playerData = 9;     
-    optional int64 escortCartFightValue = 10;          
+    optional string escortCartFightValue = 10;          
     optional bool attackedByMe = 11;                   
 }
 message UnionBountyPlunderReq {
@@ -221,7 +222,7 @@ message UnionBountyOpenMonsterResp{
     repeated PlayerHeadAndFightMsg headAndFightMsg = 4;  
     optional BattleMain bossBattleMain = 5;              
     repeated int64 invitedPeoples = 6;                   
-    optional int64 monsterPower = 7;                     
+    optional string monsterPower = 7;                     
 }
 message UnionBountyMonsterChangePosReq{
     required int64 resPlayerId = 1;     
@@ -264,7 +265,7 @@ message UnionBountyAskHelpMsg{
     optional string leaderName = 2;             
     optional int64 serverId = 3;                
     optional int32 eventId = 4;                 
-    optional int64 teamPower = 5;               
+    optional string teamPower = 5;               
 }
 message UnionBountyDealAskHelpReq{
     optional int32 type = 1;        
@@ -288,7 +289,7 @@ message UnionBountyPlayerInfo{
     optional int64 playerId = 1; 
     optional int32 headIcon = 2; 
     optional string nickName = 3; 
-    optional int64 fightValue = 4; 
+    optional string fightValue = 4; 
     optional string unionName = 5;
     optional int32 appearanceId = 6; 
     optional int64 serverId = 7; 
@@ -301,7 +302,7 @@ message UnionBountyBountyInfo{
     optional int32 unionBountyExp = 2;                       
     optional UnionBountyFinishReward finishReward = 3;       
     optional int32 unionBountyDailyExp = 4;                  
-    optional int64 monsterPower = 5;                         
+    optional string monsterPower = 5;                         
     optional int32 pos = 6;                                  
 }
 message UnionBountyFinishReward{

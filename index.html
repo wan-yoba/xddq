@@ -343,11 +343,15 @@
         <h1>🎮 Game Login</h1>
         <div class="form-group">
           <label>Username</label>
-          <input type="text" id="username" placeholder="Enter username" />
+          <input type="text" id="username" placeholder="Input username" />
         </div>
         <div class="form-group">
           <label>Password</label>
-          <input type="password" id="password" placeholder="Enter password" />
+          <input type="password" id="password" placeholder="Input password" />
+        </div>
+        <div class="form-group">
+          <label>Token</label>
+          <input type="password" id="token" placeholder="Input token" />
         </div>
         <button id="fetchServersBtn" onclick="fetchServerList()">
           🌐 Get Server List
@@ -398,7 +402,6 @@
     <script>
       const MAX_LOG_ITEMS = 50;
       let logCount = 0;
-      let ws = null;
       let baseUrl = "localhost:8082";
       let reconnectAttempts = 0;
       const maxReconnectAttempts = 5; // 最大重连次数
@@ -433,7 +436,8 @@
       async function fetchServerList() {
         const username = document.getElementById("username").value.trim();
         const password = document.getElementById("password").value.trim();
-        if (!username || !password) {
+        const token = document.getElementById("token").value.trim();
+        if (!username || !password || !token) {
           showToast("🔐 Please enter username and password", "warning");
           return;
         }
@@ -442,7 +446,9 @@
           const response = await fetch(
             `http://${baseUrl}/api/servers?username=${encodeURIComponent(
               username
-            )}&password=${encodeURIComponent(password)}`
+            )}&password=${encodeURIComponent(
+              password
+            )}&token=${encodeURIComponent(token)}`
           );
           const data = await response.json();
           const select = document.getElementById("servers");
@@ -455,7 +461,11 @@
             select.disabled = false;
             showToast("🌍 Server list updated", "success");
           } else {
-            showToast("⚠️ No servers available", "error");
+            if (data.error.length) {
+              showToast(`⚠️ ${data.error}`, "error");
+            } else {
+              showToast("⚠️ No servers available", "error");
+            }
           }
         } catch (error) {
           showToast(`❌ Error: ${error.message}`, "error");
@@ -513,23 +523,34 @@
 
       // 退出
       async function logout() {
-        showOverlay();
+        try {
+          let sessionData = localStorage.getItem("userSession");
+          let userSession = JSON.parse(sessionData);
+          let playerId = userSession.playerId;
+          showOverlay();
 
-        const response = await fetch(`http://${baseUrl}/api/logout`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        });
-        const data = await response.json();
-        if (data.logout) {
-          this.cleanup(); //ws
-          this.updateStatus("disconnected"); //connect
-          localStorage.removeItem("userSession"); // session
-          localStorage.removeItem("userInfo");
-          this.showToast("user logout . websocket disconnected");
-          this.appendLog("info", "user logout . websocket disconnected");
+          const response = await fetch(`http://${baseUrl}/api/logout`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ playerId }),
+          });
+          const data = await response.json();
+          if (data.logout) {
+            wsManager.ws.close(1000, "logout"); //ws
+            wsManager.updateStatus("disconnected"); //connect
+            localStorage.removeItem("userSession"); // session
+            localStorage.removeItem("userInfo");
+            this.showToast("user logout . websocket disconnected");
+            wsManager.appendLog("warn", "user logout . websocket disconnected");
+
+            document.querySelector(".logout-btn").style.disabled = "true";
+          }
+        } catch (error) {
+          console.error(error);
+          this.showToast(` ${error} `, "error");
+        } finally {
+          hideOverlay();
         }
-
-        hideOverlay();
       }
 
       // 登陆成功
@@ -641,7 +662,11 @@
         handleMessage(event) {
           try {
             const data = JSON.parse(event.data);
-            this.appendLog(data.level, data.message, data.timestamp);
+            this.appendLog(
+              data.level.replace(/\x1B\[[0-9;]*m/g, ""),
+              data.message,
+              data.timestamp
+            );
 
             // 更新用户信息
             if (data.message?.indexOf("wxHeadUrl") != -1) {
@@ -654,9 +679,13 @@
 
         handleClose(event) {
           const reason = event.reason || "webSocket disconnected .";
-          this.appendLog("error", `连接关闭: ${reason}`);
-          this.updateStatus("reconnecting");
-          this.scheduleReconnect();
+          if (reason != "logout") {
+            this.appendLog("error", `连接关闭: ${reason}`);
+            this.updateStatus("reconnecting");
+            this.scheduleReconnect();
+          } else {
+            this.logout();
+          }
         }
 
         handleError(error) {
@@ -676,9 +705,10 @@
               );
               this.connect(this.url);
             }, this.currentInterval);
-
-            this.updateUIState();
           } else {
+            localStorage.removeItem("userSession"); // session
+            localStorage.removeItem("userInfo");
+
             this.updateStatus("disconnected");
             this.appendLog("error", `达到最大重连次数. 请重新登录游戏`);
             showToast("达到最大重连次数. 请重新登录游戏", "error");
@@ -756,10 +786,10 @@
           const color = colorMap[logLevel] || colorMap.default;
 
           logItem.innerHTML = `
-    <span style="color: ${color}; font-weight: 600;">[${logLevel.toUpperCase()}]</span>
-    <span style="color: #95a5a6;">[${timestamp}]</span> 
-    - ${message}
-  `;
+        <span style="color: ${color}; font-weight: 600;">[${logLevel.toUpperCase()}]</span>
+        <span style="color: #95a5a6;">[${timestamp}]</span>
+        - ${message}
+      `;
 
           // 使用 prepend 代替 insertBefore 更简洁
           logOutput.prepend(logItem);

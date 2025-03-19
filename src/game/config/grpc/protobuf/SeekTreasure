@@ -36,6 +36,11 @@ message SeekTreasureActivityData{
   optional int32 rareIndex = 3; 
   optional int32 point = 4; 
   optional int32 todayPoint = 5; 
+  repeated SeekTreasureRewardSelectData selectRareRewardItem = 6; 
+}
+message SeekTreasureRewardSelectData {
+  required int32 rareIndex = 1;
+  required int32 selectIndex = 2;
 }
 message SeekTreasureRewardData{
   optional int32 rareIndex = 1; 
@@ -55,4 +60,12 @@ message SeekTreasureNoticeSyncInfo{
   optional string nickName = 1;
   optional int64 times = 2;
   optional string reward = 3;
+}
+message SeekTreasureSelectRewardReqMsg {
+  required int32 activityId = 1;
+  required int32 rareIndex = 2;
+  optional int32 chooseIndex = 3; 
+}
+message SeekTreasureSelectRewardRespMsg {
+  required int32 ret = 1;
 }

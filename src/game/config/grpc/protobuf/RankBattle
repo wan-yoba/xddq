@@ -4,6 +4,7 @@ import "Battle";
 message GetBattleListResp {
     optional int32 ret = 1;
     repeated PlayerBattleShowDataMsg playerBattleShowDataMsg = 2; 
+    optional bool robotScoreLimit = 3; 
 }
 message PlayerBattleShowDataMsg {
     optional PlayerBaseDataMsg playerBaseDataMsg = 1; 
@@ -13,6 +14,7 @@ message PlayerBattleShowDataMsg {
 message RefreshBattleListResp {
     optional int32 ret = 1;
     repeated PlayerBattleShowDataMsg playerBattleShowDataMsg = 2; 
+    optional bool robotScoreLimit = 3; 
 }
 message RankBattleChallengeReq {
     required int32 index = 1; 
@@ -53,4 +55,10 @@ message RankBattleRevengeResp {
 message RankBattleSync {
     required int32 groupId = 1;
     required int32 round = 2;
+}
+message RankBattleServerListReq {
+}
+message RankBattleServerListResp {
+    required int32 ret = 1;
+    repeated int64 serverId = 2;
 }

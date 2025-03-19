@@ -7,6 +7,7 @@ message MagicTreasurePlayerDataMsg {
     repeated MagicTreasureDataMsg magicTreasureData = 1; 
     repeated MagicTreasureJackpotMsg jackpotData = 2; 
     repeated MagicTreasureJackpotConfigMsg jackpotConfig = 3;
+    repeated MagicTreasureLinkageDataMsg linkageDataMsg = 4; 
   }
   message MagicTreasureJackpotMsg{
     optional int32 poolId = 1;
@@ -33,6 +34,7 @@ message MagicTreasurePlayerDataMsg {
     required int32 starLv = 2; 
     required int32 lv = 3; 
     optional int32 cumulativeNum = 4; 
+    optional int32 equipLinkageId = 5; 
   }
   message MagicTreasureResultItemMsg{
     required string reward  = 1;
@@ -72,3 +74,15 @@ message MagicTreasurePlayerDataMsg {
     required int32 ret = 1;
     optional MagicTreasureDataMsg magicTreasureData = 2; 
   }
+  message MagicTreasureLinkageDataMsg {
+    required int32 magicTreasureConfigId = 1;
+    required int32 linkageId = 2;
+}
+message MagicTreasureSwitchLinkageSkinReq {
+  required int32 magicTreasureId = 1;
+  required int32 linkageId = 2;
+}
+message MagicTreasureSwitchLinkageSkinResp {
+  required int32 ret = 1;
+  optional MagicTreasureDataMsg data = 2;
+}

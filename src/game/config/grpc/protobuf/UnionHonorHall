@@ -1,0 +1,147 @@
+package com.yq.msg.CityMsg; 
+import "Union";
+import "Common";
+import "Config";
+message UnionHonorHallAchieveData {
+    required int32 id = 1;
+    optional int32 alreadyReceive = 2; 
+    optional bool isReceive = 3; 
+}
+message UnionHonorHallAchieveRewardDetailPlayerData {
+    optional string playerName = 1; 
+}
+message UnionHonorHallHistoryRecord {
+    required int32 recordId = 1;        
+    optional int32 systemId = 2;        
+    optional int32 rank = 3;            
+    optional int64 time = 4;            
+    optional int64 receiveHonorScore = 5;   
+    optional int32 getTrophyId = 7;         
+}
+message UnionHonorHallHistoryHonorPlayerData {
+    optional string playerName = 1; 
+    optional int32 rank = 2; 
+    optional int64 receiveHonorScore = 3; 
+}
+message UnionHonorHallHistoryHonorUnionData {
+    optional string unionName = 1; 
+    optional int32 rank = 2; 
+    optional int64 receiveHonorScore = 3; 
+}
+message UnionHonorHallPeakRankData {
+    optional OtherUnionData unionData = 1; 
+    optional int64 honorScoreIncrease = 2; 
+    optional int32 rank = 3; 
+}
+message UnionHonorHallWorshipShowMsg{
+    required int64 playerId = 1;
+    required int64 serverId = 2;
+    required string nickName = 3;
+    repeated int32 pet = 4;
+    repeated int32 spirit = 5;
+    optional int32 appearanceId = 6; 
+    optional int32 equipCloudId = 7; 
+    optional int32 realmsId = 8;  
+    optional int64 time = 9;
+    optional int32 rank = 10;
+    optional int32 headIcon = 11; 
+    optional string wxHeadUrl = 12; 
+    optional PlayerHeadDataMsg headInfo = 13;
+    repeated int32 petSoulShapeList = 14; 
+    optional int32 titleId = 15; 
+    repeated int32 petLinkageId = 16; 
+    repeated int32 spiritLinkageId = 17; 
+}
+message UnionHonorHallHonorRankData {
+    optional OtherUnionData unionData = 1; 
+    optional int64 honorScore = 2; 
+    optional int32 rank = 3; 
+}
+message UnionHonorHallGroupUnionInfo {
+    repeated string unionName = 1;                       
+    optional int64 serverId = 2;                         
+}
+message UnionHonorHallEnterReq {
+    required int64 unionId = 1;
+}
+message UnionHonorHallEnterResp {
+    required int32 ret = 1; 
+    optional int64 honorScore = 2;          
+    optional int64 lastMonthHonorScore = 3; 
+    optional int32 monthRank = 4;           
+}
+message UnionHonorHallGetAchieveReq {
+    required int64 unionId = 1;
+}
+message UnionHonorHallGetAchieveResp {
+    required int32 ret = 1; 
+    repeated UnionHonorHallAchieveData dataList = 2; 
+}
+message UnionHonorHallGetAchieveRewardDetailReq {
+    required int64 unionId = 1;
+    required int32 achieveId = 2; 
+}
+message UnionHonorHallGetAchieveRewardDetailResp {
+    required int32 ret = 1;
+    repeated UnionHonorHallAchieveRewardDetailPlayerData dataList = 2; 
+}
+message UnionHonorHallGetAchieveRewardReq {
+    required int64 unionId = 1;
+    required int32 achieveId = 2; 
+}
+message UnionHonorHallGetAchieveRewardResp {
+    required int32 ret = 1;
+    optional string rewards = 2; 
+    optional UnionHonorHallAchieveData newData = 3; 
+}
+message UnionHonorHallHistoryHonorReq {
+    required int64 unionId = 1;
+}
+message UnionHonorHallHistoryHonorResp {
+    required int32 ret = 1;
+    repeated UnionHonorHallHistoryRecord dataList = 2; 
+}
+message UnionHonorHallUseTrophyReq {
+    required int64 unionId = 1;
+    required int32 trophyId = 2; 
+}
+message UnionHonorHallUseTrophyResp {
+    required int32 ret = 1;
+}
+message UnionHonorHallGetPeakRankReq {
+    required int64 unionId = 1;
+    optional int32 type = 2; 
+}
+message UnionHonorHallGetPeakRankResp {
+    required int32 ret = 1;
+    repeated UnionHonorHallPeakRankData rankList = 2; 
+    optional UnionHonorHallPeakRankData myUnionRankData = 3; 
+    optional bool isWorship = 4 ;
+    optional bool isGetReward = 5; 
+    optional bool haveLastMonthData = 6; 
+    repeated UnionHonorHallGroupUnionInfo infoList = 7; 
+    repeated SystemSeasonRankConfig configList = 8; 
+}
+message UnionHonorHallPeakRankWorshipReq {
+    required int64 unionId = 1;     
+}
+message UnionHonorHallPeakRankWorshipResp {
+    required int32 ret = 1;
+    optional string rewards = 2; 
+    optional UnionHonorHallWorshipShowMsg showMsg = 3; 
+}
+message UnionHonorHallPeakRankGetRewardReq {
+    required int64 unionId = 1;
+}
+message UnionHonorHallPeakRankGetRewardResp {
+    required int32 ret = 1;
+    optional string rewards = 2; 
+}
+message  UnionHonorHallGetHonorRankReq {
+    required int64 unionId = 1;
+}
+message  UnionHonorHallGetHonorRankResp {
+    required int32 ret = 1;
+    repeated UnionHonorHallHonorRankData rankList = 2; 
+    optional UnionHonorHallHonorRankData myRank = 3; 
+}

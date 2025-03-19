@@ -3,6 +3,43 @@ import CryptoJS from "crypto-js";
 import qs from "qs";
 import { v4 as uuidv4 } from "uuid";
 import logger from "#utils/logger.js";
+import fs from 'fs';
+import util from 'util';
+
+/**
+ * 更新 account.js 文件
+ * @param {*} filePath 
+ * @param {*} newObject 
+ * @returns 
+ */
+export async function updateAccount(filePath, newObject) {
+    const readFileAsync = util.promisify(fs.readFile);
+    const writeFileAsync = util.promisify(fs.writeFile);
+    try {
+        const data = await readFileAsync(filePath, 'utf8');
+        let account;
+
+        try {
+            account = JSON.parse(data);
+        } catch (parseErr) {
+            logger.error('account.json JSON解析错误:', parseErr);
+            return;
+        }
+
+        Object.assign(account, newObject);
+
+        const newContent = JSON.stringify(account, null, 4);
+
+        try {
+            await writeFileAsync(filePath, newContent, 'utf8');
+            logger.info('account.json 文件已成功修改并保存');
+        } catch (writeErr) {
+            logger.error('account.json 写入文件时出错:', writeErr);
+        }
+    } catch (err) {
+        logger.error('account.json 读取文件时出错:', err);
+    }
+}
 
 export default class AuthService {
     getRandomNum(count) {
@@ -29,7 +66,7 @@ export default class AuthService {
             uid: uid,
             uname: uname
         };
-    
+
         return encodeURIComponent(JSON.stringify(dataObj));
     }
 
@@ -38,16 +75,16 @@ export default class AuthService {
             'login_account': username,
             'password': this.encryptPwd(password)
         });
-    
+
         const config = {
             method: 'post',
             url: 'https://mysdk.37.com/index.php?c=api-login&a=act_login',
-            headers: { 
+            headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
             data: data
         };
-    
+
         try {
             const response = await axios(config);
             return response.data;
@@ -64,16 +101,16 @@ export default class AuthService {
             'ptoken': ptoken,
             'puid': username
         });
-    
+
         const config = {
             method: 'post',
             url: 'https://apimyh5.37.com/index.php?c=sdk-login&a=act_login',
-            headers: { 
+            headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
             data: data
         };
-    
+
         try {
             const response = await axios(config);
             return response.data;
@@ -85,7 +122,7 @@ export default class AuthService {
 
     async thirdRequest(serverId, token, uid, username) {
         const requestBody = this.createRequestBody(token, uid, username);
-    
+
         const data = JSON.stringify({
             "data": requestBody,
             "loginType": 0,
@@ -93,16 +130,16 @@ export default class AuthService {
             "appid": "37h5",
             "gameId": 223
         });
-    
+
         const config = {
             method: 'post',
             url: `https://proxy-xddq.hdnd01.com/s${serverId}_http/player/login`,
-            headers: { 
+            headers: {
                 'Content-Type': 'application/json'
             },
             data: data
         };
-    
+
         try {
             const response = await axios(config);
             return response.data;
@@ -155,7 +192,7 @@ export default class AuthService {
                     serverId: server.serverId,
                     serverName: server.serverName
                 }));
-                
+
             return { servers };
         } catch (e) {
             logger.error("无法获取服务器列表");
@@ -172,19 +209,37 @@ export default class AuthService {
 
             const secondResponse = await this.secondRequest(username, ptoken);
             if (secondResponse.code === 1) {
-                const token = secondResponse.data.app_pst;
+                const app_pst = secondResponse.data.app_pst;
 
-                const thirdResponse = await this.thirdRequest(serverId, token, uid, username);
-
-                if (thirdResponse.ret !== 0) {
-                    throw new Error("登陆失败");
-                }
-                logger.info(`登录成功, ${JSON.stringify(thirdResponse, null, "\t")}`);
-    
+                const thirdResponse = await this.LoginWithToken(serverId, app_pst, uid, username, password);
                 return thirdResponse;
             } else {
                 throw new Error("登陆失败");
             }
+        } catch (error) {
+            throw new Error(error.message || "登陆失败");
+        }
+    }
+
+    async LoginWithToken(serverId, app_pst, uid, username, password) {
+        try {
+            const thirdResponse = await this.thirdRequest(serverId, app_pst, uid, username);
+
+            if (thirdResponse.ret !== 0) {
+                throw new Error("登陆失败");
+            }
+            logger.info(`登录成功, ${JSON.stringify(thirdResponse, null, "\t")}`);
+            // 更新账户信息 保存token uid
+            const filePath = global.configFile;
+
+            const newObject = {
+                "token": app_pst,
+                "uid": uid,
+                "nickName": thirdResponse.nickName,
+            };
+            await updateAccount(filePath, newObject);
+
+            return thirdResponse;
         } catch (error) {
             throw new Error(error.message || "登陆失败");
         }

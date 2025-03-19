@@ -45,7 +45,7 @@ message PlayerBaseDataMsg {
     optional int32 headIcon = 2; 
     optional string nickName = 3; 
     optional int32 realmsId = 4; 
-    optional int64 fightValue = 5; 
+    optional string fightValue = 5; 
     optional UnionBaseData unionData = 6;
     optional int32 appearanceId = 7; 
     optional int64 serverId = 8; 
@@ -56,6 +56,7 @@ message PlayerBaseDataMsg {
     optional int32 equipChatBubble = 13; 
     optional int32 medalId = 14;
     optional int32 cloudId = 15; 
+    optional int32 careerType = 16; 
 }
 message PlayerCharacterImageMsg {
     optional PlayerBaseDataMsg playerBaseDataMsg = 1;
@@ -78,7 +79,7 @@ message PlayerShowInfoMsg{
     optional PlayerHeadAndNameMsg headInfo = 1;
     optional string nickName = 2;             
     optional int32 realmsId = 3;              
-    optional int64 fightValue = 4;            
+    optional string fightValue = 4;            
     optional int32 equipCloudId = 5;          
 }
 message PlayerHeadDataMsg{
@@ -94,7 +95,7 @@ message PlayerHeadAndNameMsg {
 }
 message PlayerHeadAndFightMsg{
     optional PlayerHeadAndNameMsg headInfo = 1;       
-    optional int64 fightValue = 2;                    
+    optional string fightValue = 2;                    
 }
 message PlayerAppearanceDataMsg {
     optional int64 playerId = 1;        
@@ -174,6 +175,7 @@ message getLockedPlayerDetailDataReq {
     required int64 playerId = 1; 
     required int64 serverId = 2; 
     required int32 systemId = 3;
+    optional bool  isSuppress = 4; 
 }
 message getLockedPlayerDetailDataResp {
     optional int32 ret = 1;
@@ -194,9 +196,10 @@ message SearchPlayerResp {
    optional SearchPlayerMsg playerData = 2; 
 }
 message CommonSearchPlayerReq {
-   required string searchKey = 1; 
-   optional int64 serverId = 2; 
-   optional int32 systemId = 3; 
+    required string searchKey = 1; 
+    optional int64 serverId = 2; 
+    optional int32 systemId = 3; 
+    optional int32 activityId = 4 ; 
 }
 message CommonSearchPlayerResp {
    required int32 ret = 1;

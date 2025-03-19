@@ -33,6 +33,11 @@ message GatherEnergyOpenViewResp{
     required int32 ret = 1;
     optional int64 income = 2;      
     optional int64 getTimes = 3;    
+    optional int32 openNum = 4; 
+}
+message OpenGatherEnergyMsg{
+    optional int64 id = 1;          
+    optional int64 endTime = 2;    
 }
 message GatherEnergyOpenReq{
     required int32 num = 1;         
@@ -41,6 +46,7 @@ message GatherEnergyOpenResp{
     required int32 ret = 1;
     optional int64 id = 2;          
     optional int32 num = 3;         
+    optional int32 openNum = 4; 
 }
 message GatherEnergyInsideReportMsg{
     optional NoticePlayer player1 = 1;    
@@ -129,6 +135,7 @@ message GatherEnergyTransformResp{
     optional int32 energyLevel = 2; 
 }
 message GatherEnergyEnterNewReq{
+    optional int32 totalNum = 1;  
 }
 message GatherEnergyEnterNewResp{
     required int32 ret = 1;
@@ -136,6 +143,8 @@ message GatherEnergyEnterNewResp{
     optional int32 energyLevel = 3; 
     repeated int64 serverId = 4; 
     optional GatherEnergyMsg gatherEnergy = 5;  
+    optional int32 totalNum = 6;  
+    optional int32 totalAttendNum = 7;  
 }
 message GatherEnergyFirstListViewReq{
     required int32 offset = 1;      

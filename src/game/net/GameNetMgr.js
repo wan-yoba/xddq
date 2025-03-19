@@ -1,13 +1,12 @@
-import async from "async";
-
 import Protocol from "#game/net/Protocol.js";
-import { Stream } from "#game/net/Stream.js";
-import { ProtobufMgr } from "#game/net/ProtobufMgr.js";
+import Stream from "#game/net/Stream.js";
+import ProtobufMgr from "#game/net/ProtobufMgr.js";
 import { NetSocket, NetState } from "#game/net/NetSocket.js";
-
 import logger from "#utils/logger.js";
+import AuthService from "#services/authService.js";
 import MsgRecvMgr from "#game/common/MsgRecvMgr.js";
 import LoopMgr from "#game/common/LoopMgr.js";
+import RegistMgr from "#game/common/RegistMgr.js";
 
 class GameNetMgr {
   constructor() {
@@ -16,15 +15,21 @@ class GameNetMgr {
     // Server
     this.net = new NetSocket();
     this.isLogined = false;
-    this._closed = false;
-    // Restart
-    this.maxReconnectNum = 2;
-    this.reConnectTimes = 0;
-    this.isReconnectNum = 0;
+    this.isReConnectting = false;
     // handlers
     this.handlers = {};
     // Msg
     this.sendMsgLength = 0;
+    // Retry parameters
+    this.maxRetries =
+      typeof global.account.maxRetries === "string" &&
+      global.account.maxRetries.toLowerCase() === "infinity"
+        ? Infinity
+        : global.account.maxRetries || 10; // 默认最大重连次数
+    this.retryCount = 0; // 当前重连次数
+
+    this.messageQueue = []; // 创建消息队列
+    this.isSending = false; // 标记是否正在发送消息
   }
 
   static get inst() {
@@ -38,7 +43,6 @@ class GameNetMgr {
     this.playerId = playerId;
     this.token = token;
 
-    this._closed = false;
     this.net.initWithUrl(url);
     this.net.addHandler(
       this.ping.bind(this),
@@ -48,10 +52,14 @@ class GameNetMgr {
     this.net.connect(this.netStateChangeHandler.bind(this));
     this.isLogined = true;
 
-    // 开始心跳
+    logger.debug("[WebSocket] 开始心跳");
     GameNetMgr.inst.net.heartbeatStart();
-    // 开始循环任务
-    LoopMgr.inst.start();
+    logger.debug("[LoopMgr] 开始循环任务");
+    setTimeout(() => {
+      LoopMgr.inst.start();
+    }, 2000); //延迟启动定时任务2s
+    // LoopMgr.inst.start()
+    // WorkFlowMgr.inst.start()
   }
 
   netStateChangeHandler(state) {
@@ -71,76 +79,45 @@ class GameNetMgr {
   }
 
   netConnectHandler() {
-    this._closed = false;
-    this.reConnectTimes = 0;
-    this.isReconnectNum = 0;
     this.login();
     logger.info("[WebSocket] 连接成功");
   }
 
   netCloseHandler() {
     logger.error("[WebSocket] 已断开连接");
-    if (!this._closed) {
-      this.reConnectTimes += 1;
-      if (this.reConnectTimes <= 100) this.reConnect();
+    this.close();
+
+    if (this.retryCount < this.maxRetries) {
+      this.retryCount++;
+      logger.warn(`[GameNetMgr] 第 ${this.retryCount} 次重连中...`);
+
+      if (!this.isLogined && !this.isReConnectting) {
+        this.reconnect();
+      }
+    } else {
+      logger.error(
+        `[GameNetMgr] 已达到最大重连次数 ${this.maxRetries}，停止重连。`
+      );
+      process.exit(1);
     }
   }
 
   netErrorHandler() {
     logger.error("[WebSocket] 连接错误");
-    this.reConnect();
-  }
-
-  reConnect() {
-    if (!this._closed) {
-      async.waterfall(
-        [
-          (callback) => {
-            if (this.isReconnectNum < this.maxReconnectNum) {
-              const delay = 1000 * this.isReconnectNum;
-              this.isReconnectNum++;
-              setTimeout(() => {
-                logger.warn("[WebSocket] 开始重连");
-                GameNetMgr.inst.net.reConnect();
-                GameNetMgr.inst.handlers = {};
-                callback(null, true);
-              }, delay);
-            } else {
-              callback(null, false);
-            }
-          },
-          (isReconnected, callback) => {
-            if (isReconnected) {
-              callback(null, isReconnected, false);
-            } else {
-              logger.error("[WebSocket] 重连超过次数");
-            }
-          },
-          (isReconnected, callback) => {
-            if (!isReconnected) {
-              this.isReconnectNum = 0;
-              this.close();
-            }
-            callback();
-          },
-        ],
-        (err) => {
-          if (err) console.error(err);
-        }
-      );
-    }
+    this.close();
   }
 
   login() {
     const loginData = {
       token: this.token,
       language: "zh_cn",
+      liveShowType: 0,
     };
-    this.sendPbMsg(Protocol.S_PLAYER_LOGIN, loginData, null);
+    this.sendPbMsg(Protocol.S_PLAYER_LOGIN, loginData);
   }
 
   ping() {
-    this.sendPbMsg(Protocol.S_PLAYER_PING, null, null);
+    this.sendPbMsg(Protocol.S_PLAYER_PING, true);
   }
 
   addHandler(msgId, handler) {
@@ -152,7 +129,7 @@ class GameNetMgr {
     };
   }
 
-  sendPbMsg(msgId, msgData, callback, extraCmd) {
+  sendPbMsg(msgId, msgData, directSend = false) {
     if (!this.net.isConnected()) {
       return;
     }
@@ -170,9 +147,18 @@ class GameNetMgr {
     stream.writeInt(msgId);
     stream.writeLong(this.playerId);
 
-    if (stream.pbMsg) {
+    try {
       const body = stream.pbMsg.encode(msgData).finish();
       stream.writeBytes(body, 18);
+    } catch (err) {
+      // TODO 重写一下sendPbMsg逻辑
+      if (msgData && Object.keys(msgData).length > 0) {
+        logger.debug(
+          `[websocket] 发送消息：msgId: ${msgId}, msgData: ${JSON.stringify(
+            msgData
+          )}`
+        );
+      }
     }
 
     stream.writeInt(stream.offset, 2);
@@ -182,17 +168,32 @@ class GameNetMgr {
     stream.buff = t;
     stream.streamsize = stream.offset;
 
-    // Add handler
-    const protoCmd = ProtobufMgr.inst.cmdList[msgId];
-    if (callback && this.net.isConnected()) {
-      this.addHandler(protoCmd.smMsgId, callback);
+    if (directSend) {
+      this.net.send(stream.buff);
+    } else {
+      this.messageQueue.push({ msgId, msgData });
+      this.startSending();
+    }
+  }
+
+  startSending() {
+    if (this.isSending || this.messageQueue.length === 0) {
+      return;
     }
 
-    if (extraCmd && ProtobufMgr.inst.cmdList[extraCmd]) {
-      this.addHandler(extraCmd, callback);
-    }
+    this.isSending = true;
 
-    this.net.sendMsg(stream);
+    const sendNextMessage = () => {
+      if (this.messageQueue.length > 0) {
+        const { msgId, msgData } = this.messageQueue.shift();
+        this.sendPbMsg(msgId, msgData, true);
+        setTimeout(sendNextMessage, global.messageDelay);
+      } else {
+        this.isSending = false;
+      }
+    };
+
+    sendNextMessage();
   }
 
   parseArrayBuffMsg(arrayBuffer) {
@@ -203,7 +204,7 @@ class GameNetMgr {
       const length = stream.readInt();
       const msgId = stream.readInt();
 
-      const protoMsg = ProtobufMgr.inst.getMsg(msgId, false, true);
+      const protoMsg = ProtobufMgr.inst.getMsg(msgId, false);
       const msgBody = new Uint8Array(
         arrayBuffer.subarray(NetSocket.BYTES_OF_MSG_HEADER, length)
       );
@@ -214,9 +215,9 @@ class GameNetMgr {
         this.resvHandler(msgId, parsedMsg);
       }
     } catch (error) {
-      // 捕获未知协议数据并转换为十六进制字符串
-      const hexString = Buffer.from(arrayBuffer).toString("hex").toUpperCase();
-      //logger.info(`[未知协议] 数据: ${Buffer.from(arrayBuffer).toString()}`);
+      logger.debug(
+        `[未知协议] ${this.toHexString(new Uint8Array(arrayBuffer))}`
+      );
     }
   }
 
@@ -232,37 +233,137 @@ class GameNetMgr {
 
   resvHandler(msgId, msgData) {
     if (msgData) {
-      if (msgId && this.handlers[msgId]) {
-        const handler = this.handlers[msgId];
-        delete this.handlers[msgId];
-        handler.call(this, msgData);
-      } else {
-        const protoCmd =
-          ProtobufMgr.inst.resvCmdList[msgId].smMethod.split(".");
-        const method = protoCmd[protoCmd.length - 1];
+      const protoCmd = ProtobufMgr.inst.resvCmdList[msgId].smMethod.split(".");
+      const method = protoCmd[protoCmd.length - 1];
 
-        if (MsgRecvMgr[method]) {
-          logger.debug(
-            `[Handler] 找到处理函数: ${method} msgId: ${msgId} ${JSON.stringify(
-              msgData
-            )}`
-          );
-          MsgRecvMgr[method](msgData, msgId);
-        } else {
-          logger.debug(
-            `[Handler] 未找到处理函数: ${method} ${JSON.stringify(msgData)}`
-          );
-        }
+      if (MsgRecvMgr[method]) {
+        logger.debug(`[Handler] 找到处理函数: ${method} msgId: ${msgId}`);
+        MsgRecvMgr[method](msgData, msgId);
+      } else {
+        logger.debug(`[Handler] 未找到处理函数: ${method} msgId: ${msgId}`);
       }
     }
   }
 
+  async countdown(reconnectInterval) {
+    let remainingTime = reconnectInterval / 1000;
+
+    const printCountdown = () => {
+      if (remainingTime <= 10) {
+        logger.info(`剩余时间: ${remainingTime} 秒`);
+        remainingTime--;
+        return 1000; // 每秒更新
+      } else if (remainingTime <= 60) {
+        logger.info(`剩余时间: ${remainingTime} 秒`);
+        remainingTime -= 10;
+        return 10000; // 每10秒更新
+      } else {
+        logger.info(`剩余时间: ${remainingTime} 秒`);
+        remainingTime -= 30;
+        return 30000; // 每30秒更新
+      }
+    };
+
+    // 开始倒计时
+    while (remainingTime > 0) {
+      const interval = printCountdown();
+      await new Promise((resolve) => setTimeout(resolve, interval));
+    }
+    logger.info("倒计时结束");
+  }
+
+  async reconnect(resetInterval = null) {
+    logger.info("[GameNetMgr] 重连中...");
+    this.isReConnectting = true;
+    this.close();
+    LoopMgr.inst.end();
+    RegistMgr.inst.reset();
+
+    const reconnectInterval =
+      resetInterval || global.account.reconnectInterval || 5000;
+    await this.countdown(reconnectInterval);
+
+    const { wsAddress, playerId, token } = await this.doLogin();
+    this.connectGameServer(wsAddress, playerId, token);
+
+    this.isReConnectting = false;
+  }
+
   close() {
-    this._closed = true;
     if (this.net) {
       this.net.close(true);
     }
-    this.isReconnectNum = 0;
+
+    this.isLogined = false;
+    this.handlers = {};
+  }
+
+  async doLogin({ serverId, username, password } = {}) {
+    const authServiceInstance = new AuthService();
+
+    // 从参数或全局配置获取凭证，参数优先级高于全局配置
+    const effectiveServerId = serverId ?? global.account.serverId;
+    const effectiveUsername = username ?? global.account.username;
+    const effectivePassword = password ?? global.account.password;
+
+    const { token, uid } = global.account;
+
+    // 参数校验（可选，根据需求添加）
+    if (!effectiveServerId || !effectiveUsername || !effectivePassword) {
+      const missing = [];
+      if (!effectiveServerId) missing.push("serverId");
+      if (!effectiveUsername) missing.push("username");
+      if (!effectivePassword) missing.push("password");
+      throw new Error(`缺少必要参数: ${missing.join(", ")}`);
+    }
+
+    try {
+      // Login first, and then fetch the wsAddress and token
+      let response;
+      const loginParams = {
+        serverId: effectiveServerId,
+        username: effectiveUsername,
+        password: effectivePassword,
+      };
+
+      try {
+        if (token && uid) {
+          logger.info("[Login] 尝试使用token登录...");
+          response = await authServiceInstance.LoginWithToken(
+            effectiveServerId,
+            token,
+            uid,
+            effectiveUsername,
+            effectivePassword
+          );
+        } else {
+          throw new Error("[Login] token登录失败，降级到密码登录");
+        }
+      } catch (error) {
+        logger.warn(
+          "[Login] token登录失败, 尝试使用用户名密码登录...",
+          loginParams
+        );
+        response = await authServiceInstance.Login(
+          effectiveUsername,
+          effectivePassword,
+          effectiveServerId
+        );
+      }
+      logger.info("[Login] 登录成功", {
+        response: JSON.stringify(response),
+        ...loginParams,
+      });
+
+      return response;
+    } catch (error) {
+      logger.error("[Login] 登录流程失败", {
+        error: error.message,
+        serverId: effectiveServerId,
+        username: effectiveUsername,
+      });
+      throw error; // 抛出错误由调用方处理
+    }
   }
 }
 

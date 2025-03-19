@@ -4,6 +4,7 @@ import "WatchPlayer";
 import "WorldMessage";
 import "Common";
 import "Battle";
+import "Palace";
 enum PackagesBaseProtocols{
     SkyWarPb_Login_Sync = 208414;                     
     SYNC_UNION_DUEL_MSG = 208501;                     
@@ -32,6 +33,10 @@ enum PackagesBaseProtocols{
     FairyLandPb_Sync_Server_Data = 214211;              
     S_PAINT_FAIRYLAND_BEING_SYNC = 214670;            
     S_PAINT_FAIRYLAND_CHECK_POOL = 214698;            
+    ShuraBattle_applyJoinTeam =  215910; 
+    YARD_LOGIN_SYNC = 215843;                         
+    YARD_BUILD_UP_SYNC = 215851;                      
+    Career_Sync_Player_Data = 218002;                 
 }
 message SkyWarDataLoginSync {
     optional int32 battleTimes = 1; 
@@ -56,6 +61,22 @@ message UnionDuelBattleResultMsg {
     optional int32 flag = 3; 
     optional int32 star = 4; 
     optional int32 curPeople = 5; 
+}
+message CareerPlayerDataMsg{
+  optional int32 careerType = 1;
+  optional CareerTalentNodeData maxTalentNode = 2;
+  optional int32 changeCareerTimesToday = 3;
+  optional CareerBossData bossData = 4;
+  optional int64 firstSwitchCareerTime = 5;
+}
+message CareerTalentNodeData{
+  optional int32 talentId = 1;
+  optional int32 lv = 2;
+}
+message CareerBossData{
+  optional int32 hasPassBossId = 1;
+  optional int32 battleTimesToday = 2;
+  optional int32 repeatTimesToday = 3;
 }
 message UnionDuelSyncDataReq{
     required int64 unionId = 1;
@@ -86,7 +107,7 @@ message UnionDuelBaseMsg {
     optional int64 unionId = 1; 
     optional string unionName = 2; 
     optional int32 flag = 3; 
-    optional int64 power = 4; 
+    optional string power = 4; 
     optional int32 star = 5; 
     optional int32 curPeople = 6; 
     optional int32 maxPeople = 7; 
@@ -129,7 +150,7 @@ message RuleTrialDataSync {
 }
 message RuleTrialBossPowerData{
     required int32 bossId = 1; 
-    required int64 power = 2; 
+    required string power = 2; 
 }
 message RuleTrialBossConfigSyncMsg{
     repeated RuleTrialBossPowerData data = 1; 
@@ -145,6 +166,23 @@ message MountainSeaChallengeTimeReq{
 message MountainSeaChallengeTimeRsp{
     required int32 ret = 1;
     optional int32 challengeTimes = 2;
+}
+message PlanesTrialJoinTeamReq {
+    required int64 teamId = 1;
+    optional int32 realmsId = 2;
+}
+message PlanesTrialJoinTeamRsp {
+    required int32 ret = 1;
+}
+message PlanesTrialChallengeTimeReq{
+}
+message PlanesTrialChallengeTimeRsp{
+    required int32 ret = 1;
+    optional int32 challengeTimes = 2;
+    optional int32 stageId = 3;
+    optional int32 type = 4;
+    optional bool isGroup = 5;
+    optional bool achiRewardRed = 6; 
 }
 message HolyLandBattleApplyDataSyncReq{
 }
@@ -432,6 +470,7 @@ message UniverseLookMsg{
   optional int32 universeLv = 1;
   optional PlayerHeadAndNameMsg headInfo = 2; 
   optional int32 robotId = 3; 
+  optional bool isTop = 4; 
 }
 message PlayerFairyLandDataMsg {
     required int32 soarStatus = 1; 
@@ -448,7 +487,7 @@ message FairyLandHeartDevilInfo{
     optional int64 lastRefreshTime = 3;
 }
 message FairyLandBattleInfo{
-    required int64 hp = 1;
+    required string hp = 1;
     optional int64 maxHpTime = 2;
     repeated PlayerAppearanceDataMsg members = 3; 
 }
@@ -496,4 +535,40 @@ message CheckFairyPoolReq {
 }
 message CheckFairyPoolResp {
     required int32 ret = 1; 
+}
+message YardLoginSync{
+    optional bool pieceShopOpen = 1; 
+    optional string grassNum = 2; 
+    repeated YardDecorateData decorateList = 3;
+    repeated YardCombineData combineList = 4;
+}
+message YardDecorateData{
+  required int32 buildId = 1;
+  required int32 lv = 2; 
+}
+message YardCombineData{
+  required int32 combineId = 1;
+  required int32 lv = 2; 
+}
+message YardBuildUpSync{
+    repeated YardBuildUpData data = 1;
+}
+message YardBuildUpData{
+    optional int64 uniqueId = 1; 
+    optional int32 curLv = 2; 
+}
+message ShuraBattleApplyReq {
+  required int32 activityId = 1;  
+  required int64 teamId = 2; 
+  required bool join =  3; 
+}
+message ShuraBattleApplyResp {
+  required int32 ret = 1;
+  repeated int64 applyTeamIdList = 7; 
+}
+message UnionHonorHallLoginSync {
+    optional bool isOpen = 1; 
+}
+message UnionCeremonyLoginSync {
+    optional int64 lastEndTime = 1; 
 }

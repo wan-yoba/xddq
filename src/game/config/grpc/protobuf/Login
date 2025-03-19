@@ -2,6 +2,7 @@ package com.yq.msg.CityMsg;
 message ReqLoginMsg {
     required string token = 1;
     optional string language = 2;              
+    optional int32 liveShowType = 3;           
 }
 message RspLoginMsg{
     required int32 ret = 1;

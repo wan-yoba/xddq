@@ -1,46 +1,41 @@
-import { spawn } from "child_process";
-import account from "./account.js";
+import initialize from "#loaders/index.js";
+import fs from 'fs';
+import path from 'path';
 import logger from "#utils/logger.js";
 
-async function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+async function start() {
+    const configFile = process.argv[2] || './account.json';
+    const configPath = path.resolve(configFile);
+
+    if (!fs.existsSync(configPath)) {
+        logger.error(`读取account失败:${configFile}`);
+		console.log('尝试读取文件：', configPath);
+		const data = fs.readFileSync(configPath, 'utf8');
+		console.log('文件内容：', data);
+        return;
+    }
+    
+    const data = fs.readFileSync(configPath, 'utf8');
+    const account = JSON.parse(data);
+
+    global.account = account;   // 设置 global.account
+    global.colors = {
+        reset: "\x1b[0m",       // 重置颜色
+
+        // 常见前景色
+        black: "\x1b[30m",      // 黑色
+        red: "\x1b[31m",        // 红色
+        green: "\x1b[32m",      // 绿色
+        yellow: "\x1b[33m",     // 黄色
+        blue: "\x1b[34m",       // 蓝色
+        magenta: "\x1b[35m",    // 品红（洋红）
+        cyan: "\x1b[36m",       // 青色
+        white: "\x1b[37m",      // 白色
+    };
+    global.configFile = configPath;
+    global.messageDelay = 20;   // 默认延迟
+
+    await initialize();
 }
 
-(async () => {
-    let childProcess;
-    const reconnectInterval = account.reconnectInterval || 60 * 1000 * 5;
-
-    async function runCmd() {
-        childProcess = spawn("node", ["./src/index.js"], {
-            cwd: process.cwd(),
-            shell: true,
-            stdio: "inherit",
-            env: {
-                ...process.env,
-            },
-        });
-
-        childProcess.on("exit", async () => {
-            logger.warn(`[守护] 子进程退出，${reconnectInterval / 1000} 秒后重启`);
-            restartProcess();
-        });
-
-        childProcess.on("error", (err) => {
-            logger.error("[守护] 子进程出错", err);
-        });
-    }
-
-    async function restartProcess() {
-        if (childProcess) {
-            childProcess.kill(); // 杀死当前子进程
-            await new Promise((resolve) => {
-                childProcess.on("exit", resolve); // 确保子进程完全退出
-            });
-        }
-        await sleep(reconnectInterval); // 确保子进程重启前有足够的时间间隔
-        await runCmd();
-    }
-
-    // 开始运行子进程
-    await runCmd();
-})();
+start();

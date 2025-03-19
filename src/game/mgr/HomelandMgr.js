@@ -2,23 +2,22 @@ import GameNetMgr from "#game/net/GameNetMgr.js";
 import Protocol from "#game/net/Protocol.js";
 import logger from "#utils/logger.js";
 import LoopMgr from "#game/common/LoopMgr.js";
-import account from "../../../account.js";
 import UserMgr from "#game/mgr/UserMgr.js";
 
 class Homeland {
     static ExploreReq() {
         logger.debug("[福地管理] 福地探寻");
-        return GameNetMgr.inst.sendPbMsg(Protocol.S_HOMELAND_EXPLORE, {}, null);
+        return GameNetMgr.inst.sendPbMsg(Protocol.S_HOMELAND_EXPLORE, {});
     }
 
     static Manage() {
         logger.debug("[福地管理] 福地管理");
-        return GameNetMgr.inst.sendPbMsg(Protocol.S_HOMELAND_MANAGE, {}, null);
+        return GameNetMgr.inst.sendPbMsg(Protocol.S_HOMELAND_MANAGE, {});
     }
-    
+
     static ExploreEnter(playerId) {
         logger.debug(`[福地管理] 进入${playerId}的福地`);
-        return GameNetMgr.inst.sendPbMsg(Protocol.S_HOMELAND_ENTER, { playerId: playerId }, null);
+        return GameNetMgr.inst.sendPbMsg(Protocol.S_HOMELAND_ENTER, { playerId: playerId });
     }
 
     static Steal(playerId, pos, workerNum = 1) {
@@ -41,12 +40,12 @@ class Homeland {
 
     static RefreshNear() {
         logger.debug("[福地管理] 刷新附近玩家");
-        return GameNetMgr.inst.sendPbMsg(Protocol.S_HOMELAND_EXPLORE_REFRESH, {}, null);
+        return GameNetMgr.inst.sendPbMsg(Protocol.S_HOMELAND_EXPLORE_REFRESH, {});
     }
 
     static ADReward() {
         logger.debug("[福地管理] 广告奖励");
-        return GameNetMgr.inst.sendPbMsg(Protocol.S_HOMELAND_REFRESH_RESOURCE, { type: 1, position: -1, itemId: 0, isUseADTime: false }, null);
+        return GameNetMgr.inst.sendPbMsg(Protocol.S_HOMELAND_REFRESH_RESOURCE, { type: 1, position: -1, itemId: 0, isUseADTime: false });
     }
 }
 
@@ -70,7 +69,7 @@ export default class HomelandMgr {
             enemy: [],           // 临时数据 敌人玩家
         };
         this.playerRecord = {};  // 记录玩家
-        this.template = null;    // 渲染规则, 固定不变, 用于deepCopy  
+        this.template = null;    // 渲染规则, 固定不变, 用于deepCopy
         this.items = {
             all: [],             // 临时数据 存储所有玩家的福地数据
             myself: [],          // 临时数据 存储自己的福地数据
@@ -81,10 +80,14 @@ export default class HomelandMgr {
             failure: 0,          // 记录探寻失败次数
             maxFailure: 6,       // 连续 6 x 5 分钟未发现合适的福地, 且不在高产时间区间, 停止刷新福地
         };
-        
-        this.isProcessing = false;
 
-        LoopMgr.inst.add(this);
+        // 如果配置中没有定义rules, 则使用默认规则, 默认只偷取3级以上的仙桃
+        this.rules = global.account.rules || HomelandMgr.DEFAULT_RULES;
+        this.rulesWeak = global.account.rulesWeak || HomelandMgr.WEAK_RULES;         // 虚弱状态下的偷取规则
+        this.rulesStrong = global.account.rulesStrong || HomelandMgr.STRONG_RULES;   // 高效时间段采集规则
+        this.isInitialized = false;
+
+        this.isProcessing = false;
     }
 
     static TRANSLATE = {
@@ -125,14 +128,24 @@ export default class HomelandMgr {
         10047: "100047=5", // 5级昆仑铁
     }
 
-    static DEAFULT_RULES = [
+    static DEFAULT_RULES = [
         { ItemId: 100004, minItemLv: 3, isCheck: true, description: "仙桃" },
-        { ItemId: 100025, minItemLv: 5, isCheck: false, description: "净瓶水" },
+        { ItemId: 100025, minItemLv: 5, isCheck: true, description: "净瓶水" },
         { ItemId: 100000, minItemLv: 5, isCheck: false, description: "仙玉" },
         { ItemId: 100003, minItemLv: 5, isCheck: false, description: "灵石" },
         { ItemId: 100029, minItemLv: 5, isCheck: false, description: "琉璃珠" },
         { ItemId: 100044, minItemLv: 5, isCheck: false, description: "天衍令" },
         { ItemId: 100047, minItemLv: 5, isCheck: false, description: "昆仑铁" },
+    ]
+
+    static WEAK_RULES = [
+        { ItemId: 100004, minItemLv: 5, isCheck: true, description: "仙桃" },
+        { ItemId: 100025, minItemLv: 4, isCheck: true, description: "净瓶水" }
+    ]
+
+    static STRONG_RULES = [
+        { ItemId: 100004, minItemLv: 4, isCheck: true, description: "仙桃" },
+        { ItemId: 100025, minItemLv: 3, isCheck: true, description: "净瓶水" }
     ]
 
     static get inst() {
@@ -142,6 +155,10 @@ export default class HomelandMgr {
         return this._instance;
     }
 
+    reset() {
+        this._instance = null;
+    }
+
     clear() {
         LoopMgr.inst.remove(this);
     }
@@ -149,55 +166,162 @@ export default class HomelandMgr {
     deepCopy(obj) {
         return JSON.parse(JSON.stringify(obj));
     }
-        
+
+    generateTemplate(rules=this.rules) {
+        // 桃>瓶>天衍令>琉璃珠>仙玉>昆仑铁>灵石
+        const priority = [100004, 100025, 100044, 100029, 100000, 100047, 100003];
+        return this.initializeResult(priority, rules);
+    }
+
+    initializeResult(priority, rules=[]) {
+        const result = {};
+        for (let lv = 5; lv >= 1; lv--) {
+            priority.forEach((itemId) => {
+                const rule = rules.find((rule) => rule.ItemId == itemId);
+                if (rule && rule.isCheck && lv >= rule.minItemLv) {
+                    result[`${itemId}=${lv}`] = [];
+                }
+            });
+        }
+
+        // Generate rules description
+        if (rules == this.rules) {
+            const description = this.generateRulesDescription(rules);
+            logger.info(`[福地管理] 将采集${description}`);
+        }
+
+        return result;
+    }
+
+    generateRulesDescription(rules) {
+        const descriptions = rules.filter((rule) => rule.isCheck).map((rule) => `大于${rule.minItemLv}级的${rule.description}`);
+        return descriptions.join(" | ");
+    }
+
+    adjustRules() {
+        const now = new Date();
+        const hours = now.getHours();
+    
+        if (this.worker.energy < 20) {
+            // 虚弱状态下的规则调整
+            let additionalRule = {};
+            if (hours >= 2 && hours < 8) {
+                additionalRule = { "100004=3": [] };
+                logger.debug(`[福地管理] [虚弱状态] 当前能量: ${this.worker.energy} 2-8点: 还会偷3级仙桃`);
+            } else if (hours >= 8 && hours < 16) {
+                additionalRule = { "100004=2": [] };
+                logger.debug(`[福地管理] [虚弱状态] 当前能量: ${this.worker.energy} 8-16点: 还会偷2级仙桃`);
+            } else if (hours >= 16 && hours < 18) {
+                additionalRule = { "100004=1": [] };
+                logger.debug(`[福地管理] [虚弱状态] 当前能量: ${this.worker.energy} 16-18点: 还会偷1级仙桃`);
+            } else {
+                this.template = this.generateTemplate(this.rules);
+                return;
+            }
+            this.template = { ...this.generateTemplate(this.rulesWeak), ...additionalRule };
+            this.isInitialized = true;
+        } else {
+            // 检查是否处于高效时间段, 设置特殊规则
+            if (this.highEfficiencyTime(hours)) {
+                this.template = this.generateTemplate(this.rulesStrong);
+                logger.debug(`[福地管理] [高效时间] 当前能量: ${this.worker.energy}`);
+                this.isInitialized = true;
+                return;
+            }
+
+            // 当能量恢复时, 重新初始化规则模板, 只执行一次
+            if (!this.template || this.isInitialized) {
+                logger.info("[福地管理] 初始化规则模板");
+                this.template = this.generateTemplate(this.rules);
+                this.isInitialized = false;
+            }
+        }
+    }
+
+    // 高效时间段
+    highEfficiencyTime(hours) {
+        return (hours >= 10 && hours < 12) || (hours >= 18 && hours < 20) || (hours >= 22 && hours < 24);
+    }
+
     doInit(t) {
         this.worker.free = t.freeWorkerNum || 0;
         this.worker.total = t.totalWorkerNum || 0;
         this.worker.energy = t.energy || 0;
-        // 如果account.js中没有定义rules, 则使用默认规则, 默认只偷取3级以上的仙桃
-        this.rules = account.rules || HomelandMgr.DEAFULT_RULES;
+
+        // 调整规则根据当前能量状态
+        this.adjustRules();
 
         if (t.freeWorkerNum > 0 && t.energy > 0) {
             logger.info(`[福地管理] 有${t.freeWorkerNum}只空闲老鼠, 还剩${t.energy}体力`);
             this.worker.ready = true;
         } else {
-            logger.info("[福地管理] 没有空闲老鼠或体力不足");
+            logger.info(`[福地管理] 有${t.freeWorkerNum}只空闲老鼠, 还剩${t.energy}体力。没有空闲老鼠或体力不足`);
             this.worker.ready = false;
         }
     }
 
     doManage(t) {
         const playerId = UserMgr.playerId.toString();
-        const ongoing = [];
-    
         const now = new Date();
-    
-        t.reward.forEach((i) => {
-            const finishTime = new Date(parseInt(i.finishTime));
-            const isOverTwoHours = (finishTime - now) > 2 * 60 * 60 * 1000;
-            if ((this.worker.energy > 50) && isOverTwoHours) { // 体力超过50且 & 任务完成超过2小时, 撤回并重新派遣
+        const hours = now.getHours();
+        const ongoing = [];
+
+        for (const i of t.reward) {
+            const maxWorkerNum = i.maxWorkerNum; // 最大鼠宝数量
+            const finishTime = new Date(parseInt(i.finishTime)); // 结束时间
+            const timeRemaining = finishTime - now;
+            const isOverTwoHours = timeRemaining > 2 * 60 * 60 * 1000;
+
+            const iAmEnemy = i.enemy?.playerId.toString() === playerId;
+            const iAmOwner = i.owner?.playerId.toString() === playerId;
+            const data = iAmOwner ? i.owner : iAmEnemy ? i.enemy : null;
+            const isSafe = (iAmOwner && !i.enemy?.playerId) || (iAmEnemy && !i.owner?.playerId);
+
+            // 体力超过50且 & 任务完成超过2小时 & 且不存在敌人
+            if ((this.worker.energy > 50) && isOverTwoHours && isSafe) {
                 logger.info(`[福地管理] ${i.playerId.toString()}位置${i.pos}的任务已完成或超过2小时, 撤回并重新派遣!`);
+                Homeland.ExploreEnter(i.playerId);
                 Homeland.Reset(i.playerId, i.pos);
                 Homeland.Steal(i.playerId, i.pos, 1);
-            } else if (i.enemy && i.enemy.playerId.toString() == playerId) {
-                if (!i.enemy.isWinner) {
-                    logger.info(`[福地管理] ${i.playerId.toString()}位置${i.pos}的老鼠必赢, 撤走自己的老鼠!`);
-                    Homeland.Reset(i.playerId, i.pos);
-                } else {
-                    ongoing.push(i.playerId.toString());
-                }
-            } else if (i.owner && i.owner.playerId.toString() == playerId) {
-                if (!i.owner.isWinner) {
-                    logger.info(`[福地管理] ${i.playerId.toString()}位置${i.pos}的老鼠必赢, 撤走自己的老鼠!`);
-                    Homeland.Reset(i.playerId, i.pos);
-                } else {
-                    ongoing.push(i.playerId.toString());
-                }
+                break;
             }
-        });
-    
+
+            // 有对抗但是输 就撤走老鼠
+            if ((iAmEnemy && !i.enemy.isWinner) || (iAmOwner && !i.owner.isWinner)) {
+                logger.info(`[福地管理] ${i.playerId.toString()}位置${i.pos}的老鼠必赢, 撤走自己的老鼠!`);
+                Homeland.Reset(i.playerId, i.pos);
+                break;
+            }
+
+            // 强化高效时间的效率 如果高效时间内有空余的老鼠 那么多派遣1只老鼠偷取 在结束前20秒撤回到1只老鼠
+            const highEfficientSteal = () => {
+                if (this.worker.free == 0 || this.worker.energy < 20) {
+                    logger.debug("[福地管理] 没有空闲老鼠或体力不足");
+                    return;
+                }
+                // 将鼠宝数量重置为1 跳过剩余逻辑
+                if (timeRemaining < 40 * 1000 && data.workerNum != 1) {
+                    logger.info(`[福地管理] [高效偷取] ${i.playerId.toString()}位置${i.pos}重置数量至1`);
+                    Homeland.Steal(i.playerId, i.pos, 1);
+                    this.worker.free = this.worker.free + (maxWorkerNum - 1); // 增加空闲鼠宝数量
+                    return;
+                }
+                if (data.workerNum < maxWorkerNum && this.worker.free > maxWorkerNum) {
+                    logger.info(`[福地管理] [高效偷取] ${i.playerId.toString()}位置${i.pos}鼠宝数量调整至${maxWorkerNum}`);
+                    Homeland.Steal(i.playerId, i.pos, maxWorkerNum);
+                    this.worker.free = this.worker.free - (maxWorkerNum - data.workerNum); // 减少空闲鼠宝数量
+                }
+            };
+            if (this.highEfficiencyTime(hours)) {
+                highEfficientSteal();
+            }
+
+            ongoing.push(i.playerId.toString());
+        }
+
         this.player.ongoing = ongoing;
     }
+
 
     async doCheckAndSteal(myself = false) {
         if (this.worker.ready) {
@@ -306,13 +430,12 @@ export default class HomelandMgr {
         // 检查当前时间是否在允许刷新时间段
         const now = new Date();
         const hours = now.getHours();
-        
-        const isRefreshAllowed = 
-            (hours >= 10 && hours < 12) || 
-            (hours >= 18 && hours < 20) || 
-            (hours >= 22 && hours < 24);
-    
-        if (isRefreshAllowed) {
+
+        if (this.highEfficiencyTime(hours)) {
+            this.counter.failure = 0;
+        }
+
+        if (global.account.homeland.ignoreTimeCheck) {
             this.counter.failure = 0;
         }
 
@@ -364,7 +487,7 @@ export default class HomelandMgr {
             return reward.reward.indexOf("=") == -1 || reward.reward == -1 || reward.owner || reward.enemy || reward.isOnlyOwnerPull;
         }
     }
-    
+
     convertEnterData(data) {
         const playerId = data.homeland.owner.playerId.toString();
         const nickName = data.homeland.owner.nickName;
@@ -381,39 +504,14 @@ export default class HomelandMgr {
         return result;
     }
 
-    initializeResult(priority) {
-        const result = {};
-
-        priority.forEach((itemId) => {
-            const rule = this.rules.find((rule) => rule.ItemId == itemId);
-            if (rule && rule.isCheck) {
-                for (let lv = 5; lv >= rule.minItemLv; lv--) {
-                    result[`${itemId}=${lv}`] = [];
-                }
-            }
-        });
-        // Generate rules description
-        const description = this.generateRulesDescription(this.rules);
-        logger.info(`[福地管理] 将采集${description}`);
-        return result;
-    }
-
-    generateRulesDescription(rules) {
-        const descriptions = rules.filter((rule) => rule.isCheck).map((rule) => `大于${rule.minItemLv}级的${rule.description}`);
-
-        return descriptions.join(" | ");
-    }
-
     findDescription(id) {
         return this.rules.find((rule) => rule.ItemId == id).description;
     }
 
     checkItems(itemData, prefix, isEnter = false, idOnly = false) {
-        // Initialize the template
         if (!this.template) {
             logger.info("[福地管理] 初始化规则模板");
-            const priority = [100029, 100044, 100000, 100003, 100047, 100004, 100025];
-            this.template = this.initializeResult(priority);
+            this.template = this.generateTemplate(this.rules);
         }
 
         // Deep copy the initialized result
@@ -483,7 +581,7 @@ export default class HomelandMgr {
         this.isProcessing = true;
 
         try {
-            if (account.switch.homeland === false) {
+            if (global.account.switch.homeland === false) {
                 logger.info("[福地管理] 未开启福地偷桃");
                 this.clear();
                 this.isProcessing = false;

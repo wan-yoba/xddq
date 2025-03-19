@@ -1,17 +1,31 @@
 import GameNetMgr from "#game/net/GameNetMgr.js";
 import Protocol from "#game/net/Protocol.js";
+import SystemUnlockMgr from "#game/mgr/SystemUnlockMgr.js";
 import logger from "#utils/logger.js";
 
 export default class PalaceMgr {
-    constructor() {}
+    constructor() {
+        this.isMiracle = false;
+    }
 
-    static isMiracle = false;
+    checkIsMiracle() {
+        return this.isMiracle;
+    }
 
     static get inst() {
+        if (!SystemUnlockMgr.PALACE) {
+            logger.warn(`[仙宫管理] ${global.colors.red}系统未解锁${global.colors.reset}`);
+            return null;
+        }
+
         if (!this._instance) {
             this._instance = new PalaceMgr();
         }
         return this._instance;
+    }
+
+    reset() {
+        this._instance = null;
     }
 
     clear() {}
@@ -19,32 +33,46 @@ export default class PalaceMgr {
     async checkReward(t) {
         for (let i = 0; i < t.data.length; i++) {
             const id = t.data[i].id;
+            const rewardType = t.data[i].type;
+
+            // "SendGiftType_StarTrial"/"SendGiftType_Palace"
+
             logger.info(`[仙宫管理] 收获礼物 ${id}`);
-            GameNetMgr.inst.sendPbMsg(Protocol.S_PALACE_SEND_GIFT_GET_REWARD, {id: id, getReward: true, type: "SendGiftType_Palace"}, null);
+            GameNetMgr.inst.sendPbMsg(Protocol.S_PALACE_SEND_GIFT_GET_REWARD, { id: id, getReward: true, type: rewardType });
             await new Promise((resolve) => setTimeout(resolve, 1000));
         }
     }
 
     PalaceWorshipRsp(t) {
         if (t.titleId) {
-            GameNetMgr.inst.sendPbMsg(Protocol.S_PALACE_WORSHIP, {titleId: t.titleId, isRandom: 0}, null);
+            GameNetMgr.inst.sendPbMsg(Protocol.S_PALACE_WORSHIP, { titleId: t.titleId, isRandom: 0 });
         }
     }
 
     checkWorship(t) {
-        logger.debug(`[仙宫管理] 检查崇拜`);
+        logger.debug("[仙宫管理] 检查崇拜");
         if (t.worship && t.worshipRandom) {
-            GameNetMgr.inst.sendPbMsg(Protocol.S_PALACE_SEND_GIFT_GET_REWARD, {titleId: 0, isRandom: 1}, null);
+            logger.info("[仙宫管理] 尝试今日点赞");
+            GameNetMgr.inst.sendPbMsg(Protocol.S_PALACE_WORSHIP, { titleId: 0, isRandom: 1 });
         }
+        t.palaceData.forEach((palace) => {
+            if (palace.worship) {
+                logger.info(`[仙宫管理] 处理崇拜标题ID: ${palace.titleId}`);
+                GameNetMgr.inst.sendPbMsg(Protocol.S_PALACE_WORSHIP, { titleId: palace.titleId, isRandom: 0 });
+            }
+        });
     }
 
     checkMiracle(t) {
+        if (this.isMiracle) {
+            return;
+        }
         if (t.miracleId !== 0) {
-            logger.info(`[仙宫管理] 已膜拜成功`);
-            PalaceMgr.isMiracle = true;
+            logger.info("[仙宫管理] 已膜拜成功");
+            this.isMiracle = true;
         } else {
-            PalaceMgr.isMiracle = false;
-            GameNetMgr.inst.sendPbMsg(Protocol.S_PALACE_SEND_GIFT_GET_REWARD, {titleId: 0, isRandom: 1}, null);
+            logger.info("[仙宫管理] 尝试今日点赞");
+            GameNetMgr.inst.sendPbMsg(Protocol.S_PALACE_WORSHIP, { titleId: 0, isRandom: 1 });
         }
     }
 }

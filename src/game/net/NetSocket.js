@@ -16,13 +16,11 @@ const WSState = {
 
 class NetSocket {
   constructor() {
-    this.sioIndex = 0;
     this.url = "";
     // Sio and state
     this.sio = null;
     this.connected = false;
     this.isConnecting = false;
-    this.isReConnecting = false;
     this.clearSio = false;
     this.isOnClose = false;
     this.netCallback = null;
@@ -42,10 +40,6 @@ class NetSocket {
   addHandler(ping, parseArrayBuffMsg) {
     this.ping = ping;
     this.parseArrayBuffMsg = parseArrayBuffMsg;
-  }
-
-  getIsReConnecting() {
-    return this.isReConnecting;
   }
 
   connect(callback) {
@@ -83,7 +77,6 @@ class NetSocket {
 
     this.sio.onmessage = (event) => {
       const data = event.data;
-      this.sizeOfResv += data.size;
       if (data && data !== "null") {
         this.msgQueue.push(data);
         this.readNextMsgData();
@@ -126,11 +119,6 @@ class NetSocket {
     logger.info("[WebSocket] 开始连接");
   }
 
-  reConnect() {
-    this.isReConnecting = true;
-    this.connect();
-  }
-
   close() {
     if (this.connected) {
       if (this.sio) {
@@ -155,16 +143,12 @@ class NetSocket {
     return this.connected;
   }
 
-  heartbeatStart(playerId) {
+  heartbeatStart() {
     if (!this.heartbeatFlag) {
       this.heartbeatFlag = true;
-      if (this.heartbeatTimeId !== null) {
-        clearInterval(this.heartbeatTimeId);
-        this.heartbeatTimeId = null;
-      }
       this.heartbeatTimeId = setInterval(() => {
         if (this.sio && this.connected) {
-          if (this.ping) this.ping(playerId);
+          if (this.ping) this.ping();
         }
       }, this.heartbeatInterval);
     }
@@ -176,7 +160,7 @@ class NetSocket {
         this.sio.send(buffer);
       }
     } catch (err) {
-      logger.debug(
+      logger.error(
         `[Message] errMsg:[${err.message}],msgData=[${JSON.stringify(buffer)}]`
       );
     }
@@ -205,5 +189,6 @@ class NetSocket {
 NetSocket.BYTES_OF_MSG_HEADER = 18;
 NetSocket.MSG_DATA_LENGTH = 256;
 NetSocket.HEADER = 29099;
+NetSocket.SIO_INDEX_KEY = "sioIndex";
 
 export { NetSocket, WSState, NetState };
