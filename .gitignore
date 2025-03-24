@@ -132,8 +132,6 @@ dist
 
 nodejs
 
-account.json
-account*.json
 
 test*
 .vscode
