@@ -2,6 +2,7 @@ import dependencyInjectorLoader from "#loaders/dependencyInjector.js";
 import GameNetMgr from "#game/net/GameNetMgr.js";
 import logger, { setWebSocket } from "#utils/logger.js";
 import AuthService, { updateAccount } from "#services/authService.js";
+import { getConfig, saveConfig } from "#loaders/configApi.js";
 import express from "express";
 import cors from "cors";
 import WebSocket, { WebSocketServer } from "ws";
@@ -75,13 +76,11 @@ export default async () => {
         password: password,
       });
 
-      // 连接游戏服务器
-      GameNetMgr.inst.connectGameServer(wsAddress, playerId, token);
-
       // 返回登录成功信息
       res.json({
         playerId,
         token,
+        wsAddress,
         message: "Login successful. WebSocket connection will be established.",
       });
     } catch (error) {
@@ -105,6 +104,52 @@ export default async () => {
       res.json({ logout });
     } else {
       res.status(500).json({ error: "request failed" });
+    }
+  });
+
+  // 获取配置
+  app.get("/api/config", async (req, res) => {
+    try {
+      const filePath = global.configFile;
+      const config = await getConfig(filePath);
+      res.json(config);
+    } catch (error) {
+      logger.error(`获取配置失败: ${error.message}`);
+      res.status(500).json({ error: "Failed to get configuration" });
+    }
+  });
+
+  // 保存配置
+  app.post("/api/config", async (req, res) => {
+    try {
+      const filePath = global.configFile;
+      const config = req.body;
+
+      // 保存配置
+      const result = await saveConfig(filePath, config);
+      res.json(result);
+    } catch (error) {
+      logger.error(`保存配置失败: ${error.message}`);
+      res.status(500).json({ error: "Failed to save configuration" });
+    }
+  });
+
+  // 启动服务器
+  app.post("/api/start", async (req, res) => {
+    try {
+      const { token, wsAddress, playerId } = req.body;
+
+      if (!playerId || !token || !wsAddress) {
+        return res.status(400).json({ message: "Invalid request" });
+      }
+
+      // 连接游戏服务器
+      GameNetMgr.inst.connectGameServer(wsAddress, playerId, token);
+      logger.info("Server started successfully.");
+      res.json({ success: true, message: "Server started successfully" });
+    } catch (error) {
+      logger.error(`启动服务器失败: ${error.message}`);
+      res.status(500).json({ message: `${error.message}` });
     }
   });
 
@@ -134,7 +179,7 @@ export default async () => {
     // 在启动服务器后创建 WebSocketServer 实例
     const wss = new WebSocketServer({ noServer: true });
 
-    wss.on("connection", (ws, request) => {
+    wss.on("connection", (ws) => {
       // 发送测试消息
       ws.send("New WebSocket connection established.");
 
