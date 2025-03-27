@@ -29,7 +29,7 @@
 ### dockerUi 部署
 ```
 docker build -t xddq-ui-image .
-docker run --name=xddq-ui -dp 8083:8083 --restart=always -e TZ=Asia/Shanghai xddq-ui-image
+docker run --name=xddq-ui -dp 8083:80 --restart=always -e TZ=Asia/Shanghai xddq-ui-image
 ```
 
 ### docker服务端 部署
