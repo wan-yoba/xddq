@@ -52,7 +52,7 @@ docker run --name=xddq -dp 8082:8082 --restart=always -e TZ=Asia/Shanghai xddq-i
 如果是本机，可以不用部署ui界面，直接点击 index.html 即可
 
 ```
-* 记得更改 `index.html` 中的 `baseUrl`，将 localhost 改为对应的ip地址，这是在服务器上面的操作
+* 记得更改 `UI` 中的 `baseUrl`，将 localhost 改为对应的ip地址，这是在服务器上面的操作
 * 有设置 `token` 在 `account.js` 中，将 `loginToken` 的值设定为自己想要的即可，如果不设置将不验证
 
 ### windows 应用
