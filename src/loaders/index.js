@@ -66,7 +66,7 @@ export default async () => {
         logger.info("更新配置文件成功，已写入相应参数.");
       } catch (error) {
         // ignore
-        logger.error(`更新配置文件事失败，${error.message}.`);
+        logger.error(`更新配置文件失败，${error.message}.`);
       }
 
       // 发起登陆
@@ -88,7 +88,7 @@ export default async () => {
       await localLogout();
 
       logger.error("Login failed", error);
-      res.status(500).json({ error: "Login failed" });
+      res.status(500).json({ error: error.message });
     }
   });
 

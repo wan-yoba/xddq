@@ -22,13 +22,21 @@
 	
 由于传播、利用此工具所提供的信息而造成的任何直接或者间接的后果及损失，均由使用者本人负责，作者不为此承担任何责任。
 
+## 分支
+* 分支 `main` 为 单账号的服务端
+* 分支 `develop_multi_user` 为 多账号的服务端初步实现，但在一个服务维护多个`socket`工作量巨大，未完成。建议使用 `pm2` 管理多个服务。
+* [Web](https://github.com/wan-yoba/xddq-web) `main`分支为 网页版的前端
+
 ## 网页使用方法
 
 * 获取仓库[Web](https://github.com/wan-yoba/xddq-web)
 
 ### dockerUi 部署
 ```
+// 切入到项目目录 即 `Dockerfile` 目录下
+// 构建镜像
 docker build -t xddq-ui-image .
+// 运行容器
 docker run --name=xddq-ui -dp 8083:80 --restart=always -e TZ=Asia/Shanghai xddq-ui-image
 ```
 
@@ -53,10 +61,10 @@ docker run --name=xddq -dp 8082:8082 --restart=always -e TZ=Asia/Shanghai xddq-i
 
 ```
 * 记得更改 `UI` 中的 `baseUrl`，将 localhost 改为对应的ip地址，这是在服务器上面的操作
-* 有设置 `token` 在 `account.js` 中，将 `loginToken` 的值设定为自己想要的即可，如果不设置将不验证
+* 登陆界面如果有设置 `token` 在 `account.js` 中，将 `loginToken` 的值设定为自己想要的即可，如果不设置将不验证
 
 ### windows 应用
-* 请下载 nodejs 的windows组件，切入目录，使用以下命令 `npm run start`
+* 请下载 nodejs 的windows组件，切入目录，使用以下命令 `node app.js`
 
 ### windows 打包可执行文件
 * TODO // 尚未实现
