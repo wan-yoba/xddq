@@ -10,26 +10,39 @@ import RegistMgr from "#game/common/RegistMgr.js";
 
 class GameNetMgr {
   constructor() {
-    this.token = null;
-    this.playerId = null;
-    // Server
-    this.net = new NetSocket();
-    this.isLogined = false;
-    this.isReConnectting = false;
-    // handlers
-    this.handlers = {};
-    // Msg
-    this.sendMsgLength = 0;
-    // Retry parameters
-    this.maxRetries =
-      typeof global.account.maxRetries === "string" &&
-      global.account.maxRetries.toLowerCase() === "infinity"
-        ? Infinity
-        : global.account.maxRetries || 10; // 默认最大重连次数
-    this.retryCount = 0; // 当前重连次数
+    this.connections = new Map(); // 存储多个连接实例
+    this.handlers = {}; // 全局事件处理器
+  }
 
-    this.messageQueue = []; // 创建消息队列
-    this.isSending = false; // 标记是否正在发送消息
+  // 创建新的连接实例
+  createConnection(userId) {
+    const connection = {
+      token: null,
+      playerId: null,
+      net: new NetSocket(),
+      isLogined: false,
+      isReConnectting: false,
+      sendMsgLength: 0,
+      maxRetries:
+        typeof global.account?.maxRetries === "string" &&
+        global.account.maxRetries.toLowerCase() === "infinity"
+          ? Infinity
+          : global.account?.maxRetries || 10,
+      retryCount: 0,
+      messageQueue: [],
+      isSending: false,
+    };
+    this.connections.set(userId, connection);
+    return connection;
+  }
+
+  // 获取连接实例
+  getConnection(userId) {
+    let connection = this.connections.get(userId);
+    if (!connection) {
+      connection = this.createConnection(userId);
+    }
+    return connection;
   }
 
   static get inst() {
@@ -39,98 +52,105 @@ class GameNetMgr {
     return this._instance;
   }
 
-  connectGameServer(url, playerId, token) {
-    this.playerId = playerId;
-    this.token = token;
+  connectGameServer(url, playerId, token, userId) {
+    const connection = this.getConnection(userId);
+    connection.playerId = playerId;
+    connection.token = token;
 
-    this.net.initWithUrl(url);
-    this.net.addHandler(
-      this.ping.bind(this),
-      this.parseArrayBuffMsg.bind(this)
+    connection.net.initWithUrl(url);
+    connection.net.addHandler(
+      () => this.ping(userId),
+      (data) => this.parseArrayBuffMsg(data, userId)
     );
 
-    this.net.connect(this.netStateChangeHandler.bind(this));
-    this.isLogined = true;
+    connection.net.connect((state) =>
+      this.netStateChangeHandler(state, userId)
+    );
+    connection.isLogined = true;
 
-    logger.debug("[WebSocket] 开始心跳");
-    GameNetMgr.inst.net.heartbeatStart();
-    logger.debug("[LoopMgr] 开始循环任务");
+    logger.debug(`[WebSocket] [${userId}] 开始心跳`);
+    connection.net.heartbeatStart();
+    logger.debug(`[LoopMgr] [${userId}] 开始循环任务`);
     setTimeout(() => {
       LoopMgr.inst.start();
-    }, 2000); //延迟启动定时任务2s
-    // LoopMgr.inst.start()
-    // WorkFlowMgr.inst.start()
+    }, 2000);
   }
 
-  netStateChangeHandler(state) {
-    this.netConnState = state;
+  netStateChangeHandler(state, userId) {
+    const connection = this.getConnection(userId);
+    connection.netConnState = state;
 
-    switch (this.netConnState) {
+    switch (connection.netConnState) {
       case NetState.NET_CONNECT:
-        this.netConnectHandler();
+        this.netConnectHandler(userId);
         break;
       case NetState.NET_CLOSE:
-        this.netCloseHandler();
+        this.netCloseHandler(userId);
         break;
       case NetState.NET_ERROR:
-        this.netErrorHandler();
+        this.netErrorHandler(userId);
         break;
     }
   }
 
-  netConnectHandler() {
-    this.login();
-    logger.info("[WebSocket] 连接成功");
+  netConnectHandler(userId) {
+    this.login(userId);
+    logger.info(`[WebSocket] [${userId}] 连接成功`);
   }
 
-  netCloseHandler() {
-    logger.error("[WebSocket] 已断开连接");
-    this.close();
+  netCloseHandler(userId) {
+    const connection = this.getConnection(userId);
+    logger.error(`[WebSocket] [${userId}] 已断开连接`);
+    this.close(userId);
 
-    if (this.retryCount < this.maxRetries) {
-      this.retryCount++;
-      logger.warn(`[GameNetMgr] 第 ${this.retryCount} 次重连中...`);
+    if (connection.retryCount < connection.maxRetries) {
+      connection.retryCount++;
+      logger.warn(
+        `[GameNetMgr] [${userId}] 第 ${connection.retryCount} 次重连中...`
+      );
 
-      if (!this.isLogined && !this.isReConnectting) {
-        this.reconnect();
+      if (!connection.isLogined && !connection.isReConnectting) {
+        this.reconnect(userId);
       }
     } else {
       logger.error(
-        `[GameNetMgr] 已达到最大重连次数 ${this.maxRetries}，停止重连。`
+        `[GameNetMgr] [${userId}] 已达到最大重连次数 ${connection.maxRetries}，停止重连。`
       );
-      process.exit(1);
+      this.connections.delete(userId);
     }
   }
 
-  netErrorHandler() {
-    logger.error("[WebSocket] 连接错误");
-    this.close();
+  netErrorHandler(userId) {
+    logger.error(`[WebSocket] [${userId}] 连接错误`);
+    this.close(userId);
   }
 
-  login() {
+  login(userId) {
+    const connection = this.getConnection(userId);
     const loginData = {
-      token: this.token,
+      token: connection.token,
       language: "zh_cn",
       liveShowType: 0,
     };
-    this.sendPbMsg(Protocol.S_PLAYER_LOGIN, loginData);
+    this.sendPbMsg(Protocol.S_PLAYER_LOGIN, loginData, false, userId);
   }
 
-  ping() {
-    this.sendPbMsg(Protocol.S_PLAYER_PING, true);
+  ping(userId) {
+    this.sendPbMsg(Protocol.S_PLAYER_PING, true, false, userId);
   }
 
   addHandler(msgId, handler) {
-    this.handlers[msgId] = (data) => {
+    this.handlers[msgId] = (data, userId) => {
       if (msgId !== "disconnect" && typeof data === "string") {
         data = JSON.parse(data);
       }
-      handler(data);
+      handler(data, userId);
     };
   }
 
-  sendPbMsg(msgId, msgData, directSend = false) {
-    if (!this.net.isConnected()) {
+  sendPbMsg(msgId, msgData, directSend = false, userId) {
+    const connection = this.getConnection(userId);
+    if (!connection.net.isConnected()) {
       return;
     }
 
@@ -138,23 +158,22 @@ class GameNetMgr {
     const stream = new Stream();
     stream.init(
       msgId,
-      +this.playerId,
+      +connection.playerId,
       NetSocket.BYTES_OF_MSG_HEADER + NetSocket.MSG_DATA_LENGTH,
       true
     );
     stream.writeShort(NetSocket.HEADER);
     stream.writeInt(50);
     stream.writeInt(msgId);
-    stream.writeLong(this.playerId);
+    stream.writeLong(connection.playerId);
 
     try {
       const body = stream.pbMsg.encode(msgData).finish();
       stream.writeBytes(body, 18);
     } catch (err) {
-      // TODO 重写一下sendPbMsg逻辑
       if (msgData && Object.keys(msgData).length > 0) {
         logger.debug(
-          `[websocket] 发送消息：msgId: ${msgId}, msgData: ${JSON.stringify(
+          `[websocket] [${userId}] 发送消息：msgId: ${msgId}, msgData: ${JSON.stringify(
             msgData
           )}`
         );
@@ -169,31 +188,55 @@ class GameNetMgr {
     stream.streamsize = stream.offset;
 
     if (directSend) {
-      this.net.send(stream.buff);
+      connection.net.send(stream.buff);
     } else {
-      this.messageQueue.push({ msgId, msgData });
-      this.startSending();
+      connection.messageQueue.push({ msgId, msgData });
+      this.startSending(userId);
     }
   }
 
-  startSending() {
-    if (this.isSending || this.messageQueue.length === 0) {
+  startSending(userId) {
+    const connection = this.getConnection(userId);
+    if (connection.isSending || connection.messageQueue.length === 0) {
       return;
     }
 
-    this.isSending = true;
+    connection.isSending = true;
 
     const sendNextMessage = () => {
-      if (this.messageQueue.length > 0) {
-        const { msgId, msgData } = this.messageQueue.shift();
-        this.sendPbMsg(msgId, msgData, true);
+      if (connection.messageQueue.length > 0) {
+        const { msgId, msgData } = connection.messageQueue.shift();
+        this.sendPbMsg(msgId, msgData, true, userId);
         setTimeout(sendNextMessage, global.messageDelay);
       } else {
-        this.isSending = false;
+        connection.isSending = false;
       }
     };
 
     sendNextMessage();
+  }
+
+  close(userId) {
+    const connection = this.getConnection(userId);
+    if (connection) {
+      connection.net.close();
+      connection.isLogined = false;
+      connection.isReConnectting = false;
+      connection.messageQueue = [];
+      connection.isSending = false;
+    }
+  }
+
+  reconnect(userId) {
+    const connection = this.getConnection(userId);
+    if (!connection.isReConnectting) {
+      connection.isReConnectting = true;
+      logger.info(`[GameNetMgr] [${userId}] 重连中...`);
+      setTimeout(() => {
+        connection.isReConnectting = false;
+        this.login(userId);
+      }, 5000);
+    }
   }
 
   parseArrayBuffMsg(arrayBuffer) {

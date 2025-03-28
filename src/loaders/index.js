@@ -6,6 +6,8 @@ import { getConfig, saveConfig } from "#loaders/configApi.js";
 import express from "express";
 import cors from "cors";
 import WebSocket, { WebSocketServer } from "ws";
+import AccountManager from "#services/accountManager.js";
+import { error } from "winston";
 
 export default async () => {
   //await dependencyInjectorLoader();
@@ -50,31 +52,30 @@ export default async () => {
   // 登录接口
   app.post("/api/login", async (req, res) => {
     const { username, password, serverId } = req.body;
+    const playerId = 0;
 
     try {
-      try {
-        // 更新account.js
-        const filePath = global.configFile;
-
-        const newObject = {
-          serverId: serverId,
-          username: username,
-          password: password,
-        };
-
-        await updateAccount(filePath, newObject);
-        logger.info("更新配置文件成功，已写入相应参数.");
-      } catch (error) {
-        // ignore
-        logger.error(`更新配置文件事失败，${error.message}.`);
-      }
-
       // 发起登陆
       const { wsAddress, playerId, token } = await GameNetMgr.inst.doLogin({
         serverId: serverId,
         username: username,
         password: password,
       });
+
+      // 更新用户配置
+      const userId = playerId.toString();
+      const newObject = {
+        serverId: serverId,
+        username: username,
+        password: password,
+        uid: userId,
+        token: token,
+      };
+
+      // 更新全局变量
+      await AccountManager.saveAccount(userId, newObject);
+
+      logger.info("更新配置文件成功，已写入相应参数.");
 
       // 返回登录成功信息
       res.json({
@@ -84,11 +85,13 @@ export default async () => {
         message: "Login successful. WebSocket connection will be established.",
       });
     } catch (error) {
-      // 登陆失败，清理参数
-      await localLogout();
+      if (playerId > 0) {
+        // 登陆失败，清理参数
+        await localLogout(playerId);
+      }
 
       logger.error("Login failed", error);
-      res.status(500).json({ error: "Login failed" });
+      res.status(500).json({ error: error.message });
     }
   });
 
@@ -96,9 +99,9 @@ export default async () => {
   app.post("/api/logout", async (req, res) => {
     const { playerId } = req.body;
     if (playerId) {
-      await localLogout();
+      await localLogout(playerId);
 
-      GameNetMgr.inst.close();
+      GameNetMgr.inst.close(playerId);
 
       const logout = true;
       res.json({ logout });
@@ -140,7 +143,7 @@ export default async () => {
       const { token, wsAddress, playerId } = req.body;
 
       if (!playerId || !token || !wsAddress) {
-        return res.status(400).json({ message: "Invalid request" });
+        return res.status(400).json({ error: "Invalid request" });
       }
 
       // 连接游戏服务器
@@ -149,13 +152,13 @@ export default async () => {
       res.json({ success: true, message: "Server started successfully" });
     } catch (error) {
       logger.error(`启动服务器失败: ${error.message}`);
-      res.status(500).json({ message: `${error.message}` });
+      res.status(500).json({ error: `${error.message}` });
     }
   });
 
   // 清理account
-  async function localLogout() {
-    const filePath = global.configFile;
+  async function localLogout(userId) {
+    const filePath = AccountManager.getAccountFilePath(userId);
 
     const newObject = {
       serverId: "",
