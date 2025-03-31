@@ -15,46 +15,54 @@
         {
             "ItemId": 100004,
             "minItemLv": 4,
-            "isCheck": true
+            "isCheck": true,
+            "description": "仙桃"
         },
         {
             "ItemId": 100025,
             "minItemLv": 2,
-            "isCheck": false
+            "isCheck": false,
+            "description": "净瓶水"
         },
         {
             "ItemId": 100029,
             "minItemLv": 5,
-            "isCheck": false
+            "isCheck": false,
+            "description": "琉璃珠"
         }
     ],
     "rulesWeak": [
         {
             "ItemId": 100004,
             "minItemLv": 5,
-            "isCheck": true
+            "isCheck": true,
+            "description": "仙桃"
         },
         {
             "ItemId": 100025,
             "minItemLv": 4,
-            "isCheck": true
+            "isCheck": true,
+            "description": "净瓶水"
         },
         {
             "ItemId": 100044,
             "minItemLv": 5,
-            "isCheck": true
+            "isCheck": true,
+            "description": "天衍令"
         }
     ],
     "rulesStrong": [
         {
             "ItemId": 100004,
             "minItemLv": 5,
-            "isCheck": true
+            "isCheck": true,
+            "description": "仙桃"
         },
         {
             "ItemId": 100025,
             "minItemLv": 3,
-            "isCheck": true
+            "isCheck": true,
+            "description": "净瓶水"
         }
     ],
     "switch": {
@@ -79,12 +87,12 @@
     "chopTree": {
         "stop": {
             "num": 40000,
-            "doNum": "infinity",
+            "doNum": "200",
             "level": "infinity"
         },
         "separation": {
             "fightValueFirst": true,
-            "quality": 35,
+            "quality": 36,
             "levelOffset": 5,
             "probOffsetLowLv": 0.3,
             "probOffset": 0.2,

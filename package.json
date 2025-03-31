@@ -10,12 +10,13 @@
     "dependencies": {
         "axios": "^1.7.2",
         "bignumber.js": "^9.1.2",
+        "cors": "^2.8.5",
         "crypto-js": "^4.2.0",
         "express": "^4.21.2",
+        "jsonwebtoken": "^9.0.2",
         "long": "^5.2.3",
         "protobufjs": "^7.3.0",
         "qs": "^6.12.1",
-        "cors": "^2.8.5",
         "uuid": "^10.0.0",
         "winston": "^3.13.0",
         "ws": "^8.17.0"

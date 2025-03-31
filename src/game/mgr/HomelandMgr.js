@@ -338,7 +338,7 @@ export default class HomelandMgr {
                     continue;
                 }
 
-                logger.info(`[福地管理] 偷取 ${playerName} ${pos + 1}位置的${i.itemLevel}级${i.item}!`);
+                logger.info(`[福地管理] 偷取 ${playerName} ${pos + 1}位置的 ${i.itemLevel}级 ${i.item}!`);
                 Homeland.Steal(playerId, pos, 1);
                 this.worker.free -= 1;
             }

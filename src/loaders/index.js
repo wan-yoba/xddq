@@ -6,6 +6,24 @@ import { getConfig, saveConfig } from "#loaders/configApi.js";
 import express from "express";
 import cors from "cors";
 import WebSocket, { WebSocketServer } from "ws";
+import TokenManager from "#utils/tokenManager.js";
+
+// Token验证中间件
+const authMiddleware = (req, res, next) => {
+  const token = req.headers.authorization || req.query.token;
+
+  if (!token) {
+    return res.status(401).json({ error: "Unauthorized: Token is required" });
+  }
+
+  if (!TokenManager.isTokenValid(token)) {
+    return res
+      .status(401)
+      .json({ error: "Unauthorized: Token is invalid or expired" });
+  }
+
+  next();
+};
 
 export default async () => {
   //await dependencyInjectorLoader();
@@ -76,10 +94,18 @@ export default async () => {
         password: password,
       });
 
+      // 生成JWT token
+      const jwtToken = TokenManager.generateToken({
+        playerId,
+        username,
+        serverId,
+      });
+
       // 返回登录成功信息
       res.json({
         playerId,
-        token,
+        token: token,
+        jwtToken: jwtToken,
         wsAddress,
         message: "Login successful. WebSocket connection will be established.",
       });
@@ -93,7 +119,7 @@ export default async () => {
   });
 
   // 退出登陆
-  app.post("/api/logout", async (req, res) => {
+  app.post("/api/logout", authMiddleware, async (req, res) => {
     const { playerId } = req.body;
     if (playerId) {
       await localLogout();
@@ -108,7 +134,7 @@ export default async () => {
   });
 
   // 获取配置
-  app.get("/api/config", async (req, res) => {
+  app.get("/api/config", authMiddleware, async (req, res) => {
     try {
       const filePath = global.configFile;
       const config = await getConfig(filePath);
@@ -120,7 +146,7 @@ export default async () => {
   });
 
   // 保存配置
-  app.post("/api/config", async (req, res) => {
+  app.post("/api/config", authMiddleware, async (req, res) => {
     try {
       const filePath = global.configFile;
       const config = req.body;
@@ -135,7 +161,7 @@ export default async () => {
   });
 
   // 启动服务器
-  app.post("/api/start", async (req, res) => {
+  app.post("/api/start", authMiddleware, async (req, res) => {
     try {
       const { token, wsAddress, playerId } = req.body;
 
@@ -210,8 +236,14 @@ export default async () => {
         `http://${request.headers.host}`
       );
       const userId = searchParams.get("userId");
+      const token = searchParams.get("token");
 
-      if (pathname == "/ws" && userId) {
+      if (
+        pathname == "/ws" &&
+        userId &&
+        token &&
+        TokenManager.isTokenValid(token)
+      ) {
         // 在异步上下文中存储用户信息
         // const store = asyncLocalStorage.getStore();
         // store.set('userId', userId);
